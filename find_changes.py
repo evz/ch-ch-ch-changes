@@ -80,11 +80,14 @@ def makeDataTable():
             curs.execute(create)
 
 def makeSourceTable():
+    ''' 
+    Step Two: Make the table where we will store the incoming data
+    '''
     drop = 'DROP TABLE IF EXISTS src_chicago_crime'
     create = ''' 
         CREATE TABLE IF NOT EXISTS src_chicago_crime(
           {0}
-          line_num INTEGER
+          line_num SERIAL
         )
         '''.format(DATA_COLS)
     with psycopg2.connect(DB_CONN_STR) as conn:
@@ -93,6 +96,9 @@ def makeSourceTable():
             curs.execute(create)
 
 def insertSourceData(fp):
+    ''' 
+    Step Three: Store the incoming data
+    '''
     copy_st = ''' 
         COPY src_chicago_crime({0}) 
         FROM STDIN
@@ -104,6 +110,11 @@ def insertSourceData(fp):
                 curs.copy_expert(copy_st, f)
 
 def makeNewDupTables():
+    ''' 
+    Step Four: Make tables that we'll use to find records with the same id
+    and where we will find records that are not already in the dat table
+    '''
+
     drop = 'DROP TABLE IF EXISTS {0}_chicago_crime'
     create = ''' 
         CREATE TABLE IF NOT EXISTS {0}_chicago_crime(
@@ -119,6 +130,9 @@ def makeNewDupTables():
                 curs.execute(create.format(table))
 
 def findDupRows():
+    ''' 
+    Step Five: Find records that have the same id
+    '''
     insert = ''' 
         INSERT INTO dup_chicago_crime
         SELECT 
@@ -134,6 +148,9 @@ def findDupRows():
             curs.execute(insert)
 
 def findNewRows():
+    ''' 
+    Step Six: Find records that don't already exist in the dat table
+    '''
     insert = ''' 
         INSERT INTO new_chicago_crime
         SELECT 
@@ -144,7 +161,7 @@ def findNewRows():
         JOIN dup_chicago_crime
           USING (line_num, id)
         LEFT OUTER JOIN dat_chicago_crime
-          USING(id, dup_ver)
+          USING(dup_ver, id)
         WHERE row_id IS NULL
     '''
     with psycopg2.connect(DB_CONN_STR) as conn:
@@ -152,6 +169,9 @@ def findNewRows():
             curs.execute(insert)
 
 def insertNewRows():
+    ''' 
+    Step Seven: Insert new rows into the dat table
+    '''
     insert = ''' 
         INSERT INTO dat_chicago_crime (start_date,{0})
         SELECT 
@@ -166,7 +186,10 @@ def insertNewRows():
             curs.execute(insert)
 
 def findChangedRows():
-
+    ''' 
+    Step Eight: Compare incoming data to data already in dat table to find
+    rows that have changed.
+    '''
     drop = 'DROP TABLE IF EXISTS chg_chicago_crime'
 
     create = '''
