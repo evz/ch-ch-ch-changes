@@ -1,0 +1,258 @@
+import psycopg2
+import gzip
+
+DB_USER = 'eric'
+DB_HOST = '127.0.0.1'
+DB_NAME = 'changes'
+DB_PORT = '5432'
+DB_CONN_STR = 'host={0} dbname={1} user={2} port={3}'\
+    .format(DB_HOST, DB_NAME, DB_USER, DB_PORT)
+
+DATA_COLS = ''' 
+    id BIGINT,
+    case_number VARCHAR(10),
+    orig_date TIMESTAMP,
+    block VARCHAR(50),
+    iucr VARCHAR(10),
+    primary_type VARCHAR(100),
+    description VARCHAR(100),
+    location_description VARCHAR(50),
+    arrest BOOLEAN,
+    domestic BOOLEAN,
+    beat VARCHAR(10),
+    district VARCHAR(5),
+    ward INTEGER,
+    community_area VARCHAR(10),
+    fbi_code VARCHAR(10),
+    x_coordinate INTEGER,
+    y_coordinate INTEGER,
+    year INTEGER,
+    updated_on TIMESTAMP,
+    latitude FLOAT8,
+    longitude FLOAT8,
+    location POINT,
+'''
+
+COLS = [
+    'id',
+    'case_number',
+    'orig_date',
+    'block',
+    'iucr',
+    'primary_type',
+    'description',
+    'location_description',
+    'arrest',
+    'domestic',
+    'beat',
+    'district',
+    'ward',
+    'community_area',
+    'fbi_code',
+    'x_coordinate',
+    'y_coordinate',
+    'year',
+    'updated_on',
+    'latitude',
+    'longitude',
+    'location',
+]
+
+def makeDataTable():
+    ''' 
+    Step One: Make the data table where the data will eventually live
+    '''
+
+    create = '''
+        CREATE TABLE IF NOT EXISTS dat_chicago_crime(
+          row_id SERIAL,
+          start_date TIMESTAMP,
+          end_date TIMESTAMP DEFAULT NULL,
+          current_flag BOOLEAN DEFAULT TRUE,
+          dup_ver INTEGER,
+          {0}
+          PRIMARY KEY(row_id),
+          UNIQUE(id, start_date)
+        )
+        '''.format(DATA_COLS)
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(create)
+
+def makeSourceTable():
+    drop = 'DROP TABLE IF EXISTS src_chicago_crime'
+    create = ''' 
+        CREATE TABLE IF NOT EXISTS src_chicago_crime(
+          {0}
+          line_num INTEGER
+        )
+        '''.format(DATA_COLS)
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(drop)
+            curs.execute(create)
+
+def insertSourceData(fp):
+    copy_st = ''' 
+        COPY src_chicago_crime({0}) 
+        FROM STDIN
+        WITH (FORMAT CSV, HEADER TRUE, DELIMITER',')
+    '''.format(','.join(COLS))
+    with gzip.GzipFile(fileobj=fp) as f:
+        with psycopg2.connect(DB_CONN_STR) as conn:
+            with conn.cursor() as curs:
+                curs.copy_expert(copy_st, f)
+
+def makeNewDupTables():
+    drop = 'DROP TABLE IF EXISTS {0}_chicago_crime'
+    create = ''' 
+        CREATE TABLE IF NOT EXISTS {0}_chicago_crime(
+          id BIGINT,
+          line_num INT,
+          dup_ver INT,
+          PRIMARY KEY(dup_ver, id)
+        )'''
+    for table in ['new', 'dup']:
+        with psycopg2.connect(DB_CONN_STR) as conn:
+            with conn.cursor() as curs:
+                curs.execute(drop.format(table))
+                curs.execute(create.format(table))
+
+def findDupRows():
+    insert = ''' 
+        INSERT INTO dup_chicago_crime
+        SELECT 
+          id, 
+          line_num, 
+          RANK() OVER(
+            PARTITION BY id ORDER BY line_num DESC
+          ) AS dup_ver
+        FROM src_chicago_crime
+    '''
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(insert)
+
+def findNewRows():
+    insert = ''' 
+        INSERT INTO new_chicago_crime
+        SELECT 
+          id,
+          line_num,
+          dup_ver
+        FROM src_chicago_crime
+        JOIN dup_chicago_crime
+          USING (line_num, id)
+        LEFT OUTER JOIN dat_chicago_crime
+          USING(id, dup_ver)
+        WHERE row_id IS NULL
+    '''
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(insert)
+
+def insertNewRows():
+    insert = ''' 
+        INSERT INTO dat_chicago_crime (start_date,{0})
+        SELECT 
+          NOW() AS start_date,
+          {0}
+        FROM src_chicago_crime
+        JOIN new_chicago_crime
+          USING(id)
+    '''.format(','.join(COLS))
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(insert)
+
+def findChangedRows():
+
+    drop = 'DROP TABLE IF EXISTS chg_chicago_crime'
+
+    create = '''
+        CREATE TABLE IF NOT EXISTS chg_chicago_crime(
+          ID INTEGER,
+          PRIMARY KEY(ID)
+        )'''
+
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(drop)
+            curs.execute(create)
+
+    insert = ''' 
+        INSERT INTO chg_chicago_crime
+          SELECT id
+          FROM src_chicago_crime AS s
+          JOIN dat_chicago_crime AS d
+            USING (id)
+          WHERE d.current_flag = TRUE
+            AND ((s.id IS NOT NULL OR d.id IS NOT NULL) AND s.id <> d.id)
+            OR ((s.case_number IS NOT NULL OR d.case_number IS NOT NULL) AND s.case_number <> d.case_number)
+            OR ((s.orig_date IS NOT NULL OR d.orig_date IS NOT NULL) AND s.orig_date <> d.orig_date)
+            OR ((s.block IS NOT NULL OR d.block IS NOT NULL) AND s.block <> d.block)
+            OR ((s.iucr IS NOT NULL OR d.iucr IS NOT NULL) AND s.iucr <> d.iucr)
+            OR ((s.primary_type IS NOT NULL OR d.primary_type IS NOT NULL) AND s.primary_type <> d.primary_type)
+            OR ((s.description IS NOT NULL OR d.description IS NOT NULL) AND s.description <> d.description)
+            OR ((s.location_description IS NOT NULL OR d.location_description IS NOT NULL) AND s.location_description <> d.location_description)
+            OR ((s.arrest IS NOT NULL OR d.arrest IS NOT NULL) AND s.arrest <> d.arrest)
+            OR ((s.domestic IS NOT NULL OR d.domestic IS NOT NULL) AND s.domestic <> d.domestic)
+            OR ((s.beat IS NOT NULL OR d.beat IS NOT NULL) AND s.beat <> d.beat)
+            OR ((s.district IS NOT NULL OR d.district IS NOT NULL) AND s.district <> d.district)
+            OR ((s.ward IS NOT NULL OR d.ward IS NOT NULL) AND s.ward <> d.ward)
+            OR ((s.community_area IS NOT NULL OR d.community_area IS NOT NULL) AND s.community_area <> d.community_area)
+            OR ((s.fbi_code IS NOT NULL OR d.fbi_code IS NOT NULL) AND s.fbi_code <> d.fbi_code)
+            OR ((s.year IS NOT NULL OR d.year IS NOT NULL) AND s.year <> d.year)
+            OR ((s.updated_on IS NOT NULL OR d.updated_on IS NOT NULL) AND s.updated_on <> d.updated_on)
+    '''
+
+    update = ''' 
+        UPDATE dat_chicago_crime AS d SET
+          end_date = NOW(),
+          current_flag = FALSE
+        FROM chg_chicago_crime AS c
+        WHERE d.id = c.id
+          AND d.current_flag = TRUE
+    '''
+    
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(insert)
+            curs.execute(update)
+
+if __name__ == "__main__":
+    import boto
+    from config import AWS_KEY, AWS_SECRET
+    from io import BytesIO
+    import os
+    import csv
+    import codecs
+
+    makeDataTable()
+    
+    conn = boto.connect_s3(AWS_KEY, AWS_SECRET)
+    bucket = conn.get_bucket('urbanccd-plenario')
+    for key in bucket.list(prefix='crimes_2001_to_present'):
+        print('downloading', key.name)
+        if not os.path.exists(key.name):
+            key.get_contents_to_filename(key.name)
+        contents = open(key.name, 'rb')
+        
+        print('making source table')
+        
+        makeSourceTable()
+        
+        print('inserting source data')
+        insertSourceData(contents)
+        contents.close()
+        
+        print('finding duplicates')
+        makeNewDupTables()
+        findDupRows()
+
+        print('inserting new data')
+        findNewRows()
+        insertNewRows()
+
+        print('finding changes')
+        findChangedRows()
