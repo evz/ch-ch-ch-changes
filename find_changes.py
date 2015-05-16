@@ -123,11 +123,15 @@ def makeNewDupTables():
           dup_ver INT,
           PRIMARY KEY(dup_ver, id)
         )'''
+    create_index = ''' 
+        CREATE INDEX {0}_id_ix ON {0}_chicago_crime (id)
+    '''
     for table in ['new', 'dup']:
         with psycopg2.connect(DB_CONN_STR) as conn:
             with conn.cursor() as curs:
                 curs.execute(drop.format(table))
                 curs.execute(create.format(table))
+                curs.execute(create_index.format(table))
 
 def findDupRows():
     ''' 
@@ -161,7 +165,7 @@ def findNewRows():
         JOIN dup_chicago_crime
           USING (line_num, id)
         LEFT OUTER JOIN dat_chicago_crime
-          USING(dup_ver, id)
+          USING(dup_ver,id)
         WHERE row_id IS NULL
     '''
     with psycopg2.connect(DB_CONN_STR) as conn:
@@ -173,12 +177,17 @@ def insertNewRows():
     Step Seven: Insert new rows into the dat table
     '''
     insert = ''' 
-        INSERT INTO dat_chicago_crime (start_date,{0})
+        INSERT INTO dat_chicago_crime (
+          start_date, 
+          dup_ver, 
+          {0}
+        )
         SELECT 
           NOW() AS start_date,
+          n.dup_ver,
           {0}
-        FROM src_chicago_crime
-        JOIN new_chicago_crime
+        FROM src_chicago_crime AS s
+        JOIN new_chicago_crime AS n
           USING(id)
     '''.format(','.join(COLS))
     with psycopg2.connect(DB_CONN_STR) as conn:
@@ -194,8 +203,8 @@ def findChangedRows():
 
     create = '''
         CREATE TABLE IF NOT EXISTS chg_chicago_crime(
-          ID INTEGER,
-          PRIMARY KEY(ID)
+          id INTEGER,
+          PRIMARY KEY (id)
         )'''
 
     with psycopg2.connect(DB_CONN_STR) as conn:
@@ -205,30 +214,37 @@ def findChangedRows():
 
     insert = ''' 
         INSERT INTO chg_chicago_crime
-          SELECT id
+          SELECT d.id
           FROM src_chicago_crime AS s
           JOIN dat_chicago_crime AS d
             USING (id)
           WHERE d.current_flag = TRUE
-            AND ((s.id IS NOT NULL OR d.id IS NOT NULL) AND s.id <> d.id)
-            OR ((s.case_number IS NOT NULL OR d.case_number IS NOT NULL) AND s.case_number <> d.case_number)
-            OR ((s.orig_date IS NOT NULL OR d.orig_date IS NOT NULL) AND s.orig_date <> d.orig_date)
-            OR ((s.block IS NOT NULL OR d.block IS NOT NULL) AND s.block <> d.block)
-            OR ((s.iucr IS NOT NULL OR d.iucr IS NOT NULL) AND s.iucr <> d.iucr)
-            OR ((s.primary_type IS NOT NULL OR d.primary_type IS NOT NULL) AND s.primary_type <> d.primary_type)
-            OR ((s.description IS NOT NULL OR d.description IS NOT NULL) AND s.description <> d.description)
-            OR ((s.location_description IS NOT NULL OR d.location_description IS NOT NULL) AND s.location_description <> d.location_description)
-            OR ((s.arrest IS NOT NULL OR d.arrest IS NOT NULL) AND s.arrest <> d.arrest)
-            OR ((s.domestic IS NOT NULL OR d.domestic IS NOT NULL) AND s.domestic <> d.domestic)
-            OR ((s.beat IS NOT NULL OR d.beat IS NOT NULL) AND s.beat <> d.beat)
-            OR ((s.district IS NOT NULL OR d.district IS NOT NULL) AND s.district <> d.district)
-            OR ((s.ward IS NOT NULL OR d.ward IS NOT NULL) AND s.ward <> d.ward)
-            OR ((s.community_area IS NOT NULL OR d.community_area IS NOT NULL) AND s.community_area <> d.community_area)
-            OR ((s.fbi_code IS NOT NULL OR d.fbi_code IS NOT NULL) AND s.fbi_code <> d.fbi_code)
-            OR ((s.year IS NOT NULL OR d.year IS NOT NULL) AND s.year <> d.year)
-            OR ((s.updated_on IS NOT NULL OR d.updated_on IS NOT NULL) AND s.updated_on <> d.updated_on)
+            AND (((s.id IS NOT NULL OR d.id IS NOT NULL) AND s.id <> d.id)
+               OR ((s.case_number IS NOT NULL OR d.case_number IS NOT NULL) AND s.case_number <> d.case_number)
+               OR ((s.orig_date IS NOT NULL OR d.orig_date IS NOT NULL) AND s.orig_date <> d.orig_date)
+               OR ((s.block IS NOT NULL OR d.block IS NOT NULL) AND s.block <> d.block)
+               OR ((s.iucr IS NOT NULL OR d.iucr IS NOT NULL) AND s.iucr <> d.iucr)
+               OR ((s.primary_type IS NOT NULL OR d.primary_type IS NOT NULL) AND s.primary_type <> d.primary_type)
+               OR ((s.description IS NOT NULL OR d.description IS NOT NULL) AND s.description <> d.description)
+               OR ((s.location_description IS NOT NULL OR d.location_description IS NOT NULL) AND s.location_description <> d.location_description)
+               OR ((s.arrest IS NOT NULL OR d.arrest IS NOT NULL) AND s.arrest <> d.arrest)
+               OR ((s.domestic IS NOT NULL OR d.domestic IS NOT NULL) AND s.domestic <> d.domestic)
+               OR ((s.beat IS NOT NULL OR d.beat IS NOT NULL) AND s.beat <> d.beat)
+               OR ((s.district IS NOT NULL OR d.district IS NOT NULL) AND s.district <> d.district)
+               OR ((s.ward IS NOT NULL OR d.ward IS NOT NULL) AND s.ward <> d.ward)
+               OR ((s.community_area IS NOT NULL OR d.community_area IS NOT NULL) AND s.community_area <> d.community_area)
+               OR ((s.fbi_code IS NOT NULL OR d.fbi_code IS NOT NULL) AND s.fbi_code <> d.fbi_code)
+               OR ((s.year IS NOT NULL OR d.year IS NOT NULL) AND s.year <> d.year)
+               OR ((s.updated_on IS NOT NULL OR d.updated_on IS NOT NULL) AND s.updated_on <> d.updated_on)
+            )
     '''
+    
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(insert)
 
+def flagChanges():
+    # Update existing records to no longer be current
     update = ''' 
         UPDATE dat_chicago_crime AS d SET
           end_date = NOW(),
@@ -238,28 +254,66 @@ def findChangedRows():
           AND d.current_flag = TRUE
     '''
     
+    # Insert new version 
+    insert = ''' 
+        INSERT INTO dat_chicago_crime (
+          start_date, 
+          {0}
+        )
+        SELECT 
+          NOW() AS start_date,
+          {0}
+        FROM src_chicago_crime AS s
+        JOIN chg_chicago_crime AS c
+          USING(id)
+    '''.format(','.join(COLS))
+    
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(update)
+    
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
             curs.execute(insert)
-            curs.execute(update)
 
 if __name__ == "__main__":
-    import boto
-    from config import AWS_KEY, AWS_SECRET
-    from io import BytesIO
     import os
     import csv
     import codecs
+    import lxml.etree
+    import requests
+    from operator import itemgetter
 
     makeDataTable()
     
-    conn = boto.connect_s3(AWS_KEY, AWS_SECRET)
-    bucket = conn.get_bucket('urbanccd-plenario')
-    for key in bucket.list(prefix='crimes_2001_to_present'):
-        print('downloading', key.name)
-        if not os.path.exists(key.name):
-            key.get_contents_to_filename(key.name)
-        contents = open(key.name, 'rb')
+    bucket_url = 'http://s3.amazonaws.com/urbanccd-plenario'
+
+    bucket_listing = requests.get(bucket_url, params={'prefix': 'crimes_2001_to_present'})
+    
+    tag_prefix = 'http://s3.amazonaws.com/doc/2006-03-01/'
+    
+    downloads = []
+
+    tree = lxml.etree.fromstring(bucket_listing.content)
+    for chunk in tree.findall('{%s}Contents' % tag_prefix):
+        for key in chunk.findall('{%s}Key' % tag_prefix):
+            downloads.append((bucket_url, key.text))
+    
+    downloads = sorted(downloads, key=itemgetter(1))
+
+    for bucket_url, filename in downloads:
+        print('working on %s' % filename)
+ 
+        if not os.path.exists(filename):
+            print('downloading %s' % filename)
+            with open(filename, 'wb') as f:
+                r = requests.get('%s/%s' % (bucket_url, filename), stream=True)
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+                        f.flush()
+        
+        contents = open(filename, 'rb')
         
         print('making source table')
         
@@ -272,10 +326,13 @@ if __name__ == "__main__":
         print('finding duplicates')
         makeNewDupTables()
         findDupRows()
-
+ 
         print('inserting new data')
         findNewRows()
         insertNewRows()
-
+ 
         print('finding changes')
         findChangedRows()
+ 
+        print('flagging changes')
+        flagChanges()
