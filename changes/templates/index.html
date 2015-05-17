@@ -2,6 +2,26 @@
 {% block title %}Ch-ch-ch-changes{% endblock %}
 {% block extra_styles %}{% endblock %}
 {% block content %}
-    <div class="col-sm-12"></div>
+    <div class="col-sm-12">
+        <table class="table table-bordered table-condensed">
+            <thead>
+                <tr>
+                    {% set fields = grouped_records._cursor_description() %}
+                    {% for field in fields %}
+                        <th>{{ field.name }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in grouped_records %}
+                    <tr id="{{ record|attr("Case Number") }}">
+                        {% for field in fields %}
+                            <td>{{ record|attr(field.name) }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% endblock %}
 {% block extra_javascript %}{% endblock %}

@@ -30,7 +30,7 @@ DATA_COLS = '''
     updated_on TIMESTAMP,
     latitude FLOAT8,
     longitude FLOAT8,
-    location POINT,
+    location VARCHAR(30),
 '''
 
 COLS = [
@@ -275,6 +275,28 @@ def flagChanges():
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
             curs.execute(insert)
+
+def updateView():
+    create = ''' 
+        CREATE MATERIALIZED VIEW changed_records AS (
+            SELECT d.* FROM dat_chicago_crime AS d
+            JOIN (
+                SELECT id FROM dat_chicago_crime
+                GROUP BY id
+                HAVING(COUNT(*) > 1)
+            ) AS s
+                ON d.id = s.id
+        )
+    '''
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            try:
+                curs.execute('REFRESH MATERIALIZED VIEW changed_records')
+                conn.commit()
+            except psycopg2.ProgrammingError:
+                conn.rollback()
+                curs.execute(create)
+                conn.commit()
 
 if __name__ == "__main__":
     import os
