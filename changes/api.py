@@ -6,6 +6,8 @@ from changes.helpers import paginateView
 from sqlalchemy import text, Table, MetaData
 from datetime import datetime
 from collections import OrderedDict
+from itertools import groupby
+from operator import itemgetter
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -23,13 +25,18 @@ def listing():
     changed_records = [OrderedDict(zip(r.keys(), r)) \
                        for r in changed_records]
     
+    changed_records = sorted(changed_records, key=itemgetter('id'))
+    record_groups = []
+    for record_id, group in groupby(changed_records, key=itemgetter('id')):
+        record_groups.append({record_id: list(group)})
+
     meta = {'total_count': count}
     meta.update(query)
 
     resp = {
         'status': 'ok', 
         'meta': meta,
-        'records': changed_records,
+        'records': record_groups,
     }
 
     response = make_response(json.dumps(resp, 

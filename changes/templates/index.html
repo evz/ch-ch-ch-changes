@@ -7,16 +7,23 @@
             <thead>
                 <tr>
                     {% set fields = grouped_records._cursor_description() %}
+                    <th>Change Count</th>
                     {% for field in fields %}
-                        <th>{{ field.name }}</th>
+                        {% if field.name != 'Change Count' %}
+                            <th>{{ field.name }}</th>
+                        {% endif %}
                     {% endfor %}
                 </tr>
             </thead>
             <tbody>
                 {% for record in grouped_records %}
-                    <tr id="{{ record|attr("Case Number") }}">
+                    <tr>
+                        {% set record_id = record|attr('Record ID') %}
+                        <td><a href="{{ url_for('views.detail', record_id=record_id ) }}">{{ record|attr('Change Count') }}</a></td>
                         {% for field in fields %}
-                            <td>{{ record|attr(field.name) }}</td>
+                            {% if field.name != 'Change Count' %}
+                                <td>{{ record|attr(field.name) }}</td>
+                            {% endif %}
                         {% endfor %}
                     </tr>
                 {% endfor %}
