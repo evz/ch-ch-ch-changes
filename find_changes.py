@@ -319,9 +319,13 @@ if __name__ == "__main__":
         
         makeSourceTable()
         
-        print('inserting source data')
-        insertSourceData(contents)
-        contents.close()
+        try:
+            print('inserting source data')
+            insertSourceData(contents)
+            contents.close()
+        except psycopg2.DataError:
+            contents.close()
+            continue
         
         print('finding duplicates')
         makeNewDupTables()
