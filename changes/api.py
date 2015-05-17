@@ -1,7 +1,7 @@
 import os
 import json
 from flask import request, current_app, Blueprint, make_response
-from changes.database import session as db_session
+from changes.database import engine
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
