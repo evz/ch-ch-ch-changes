@@ -70,6 +70,7 @@ def makeDataTable():
           end_date TIMESTAMP DEFAULT NULL,
           current_flag BOOLEAN DEFAULT TRUE,
           dup_ver INTEGER,
+          source_filename VARCHAR,
           {0}
           PRIMARY KEY(row_id),
           UNIQUE(id, start_date)
@@ -104,10 +105,14 @@ def insertSourceData(fp):
         FROM STDIN
         WITH (FORMAT CSV, HEADER TRUE, DELIMITER',')
     '''.format(','.join(COLS))
-    with gzip.GzipFile(fileobj=fp) as f:
-        with psycopg2.connect(DB_CONN_STR) as conn:
-            with conn.cursor() as curs:
+    f = gzip.GzipFile(fileobj=fp)
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            try:
                 curs.copy_expert(copy_st, f)
+            except psycopg2.extensions.QueryCanceledError:
+                 conn.rollback()
+                 curs.copy_expert(copy_st, fp)
 
 def makeNewDupTables():
     ''' 
@@ -172,19 +177,21 @@ def findNewRows():
         with conn.cursor() as curs:
             curs.execute(insert)
 
-def insertNewRows():
+def insertNewRows(filename):
     ''' 
     Step Seven: Insert new rows into the dat table
     '''
     insert = ''' 
         INSERT INTO dat_chicago_crime (
           start_date, 
-          dup_ver, 
+          dup_ver,
+          source_filename,
           {0}
         )
         SELECT 
           NOW() AS start_date,
           n.dup_ver,
+          %(filename)s AS source_filename,
           {0}
         FROM src_chicago_crime AS s
         JOIN new_chicago_crime AS n
@@ -192,7 +199,7 @@ def insertNewRows():
     '''.format(','.join(COLS))
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
-            curs.execute(insert)
+            curs.execute(insert, {'filename': filename})
 
 def findChangedRows():
     ''' 
@@ -298,6 +305,28 @@ def updateView():
                 curs.execute(create)
                 conn.commit()
 
+def makeMetaTable():
+    create = ''' 
+        CREATE TABLE IF NOT EXISTS etl_tracker(
+            filename VARCHAR,
+            date_added TIMESTAMP DEFAULT NOW(),
+            etl_status VARCHAR
+        )
+    '''
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(create)
+
+def updateMetaTable(filename, status):
+    insert = ''' 
+        INSERT INTO etl_tracker (filename, etl_status) 
+        VALUES (%(filename)s, %(status)s)
+    '''
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(insert, 
+                         {'filename':filename, 'status': status})
+
 if __name__ == "__main__":
     import os
     import csv
@@ -307,7 +336,8 @@ if __name__ == "__main__":
     from operator import itemgetter
 
     makeDataTable()
-    
+    makeMetaTable()
+
     bucket_url = 'http://s3.amazonaws.com/urbanccd-plenario'
 
     bucket_listing = requests.get(bucket_url, params={'prefix': 'crimes_2001_to_present'})
@@ -325,8 +355,16 @@ if __name__ == "__main__":
 
     for bucket_url, filename in downloads:
         print('working on %s' % filename)
- 
-        if not os.path.exists(filename):
+        
+        conn = psycopg2.connect(DB_CONN_STR)
+        curs = conn.cursor()
+        curs.execute('SELECT * FROM etl_tracker WHERE filename = %(filename)s', {'filename': filename})
+        record = curs.fetchone()
+        conn.close()
+
+        if record:
+            print('found a record for %s' % filename)
+        else:
             print('downloading %s' % filename)
             with open(filename, 'wb') as f:
                 r = requests.get('%s/%s' % (bucket_url, filename), stream=True)
@@ -335,30 +373,36 @@ if __name__ == "__main__":
                         f.write(chunk)
                         f.flush()
         
-        contents = open(filename, 'rb')
-        
-        print('making source table')
-        
-        makeSourceTable()
-        
-        try:
-            print('inserting source data')
-            insertSourceData(contents)
-            contents.close()
-        except psycopg2.DataError:
-            contents.close()
-            continue
-        
-        print('finding duplicates')
-        makeNewDupTables()
-        findDupRows()
- 
-        print('inserting new data')
-        findNewRows()
-        insertNewRows()
- 
-        print('finding changes')
-        findChangedRows()
- 
-        print('flagging changes')
-        flagChanges()
+            contents = open(filename, 'rb')
+            
+            print('making source table')
+            
+            makeSourceTable()
+            
+            try:
+                print('inserting source data')
+                insertSourceData(contents)
+                contents.close()
+            except psycopg2.DataError:
+                contents.close()
+                os.remove(filename)
+                updateMetaTable(filename, 'failed - bad data')
+                continue
+            
+            print('finding duplicates')
+            makeNewDupTables()
+            findDupRows()
+     
+            print('inserting new data')
+            findNewRows()
+            insertNewRows(filename)
+     
+            print('finding changes')
+            findChangedRows()
+     
+            print('flagging changes')
+            flagChanges()
+            updateView()
+
+            updateMetaTable(filename, 'success')
+            os.remove(filename)

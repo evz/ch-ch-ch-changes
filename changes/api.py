@@ -2,7 +2,7 @@ import os
 import json
 from flask import request, current_app, Blueprint, make_response
 from changes.database import engine, db_session
-from changes.helpers import paginateView
+from changes.helpers import groupedChanges
 from sqlalchemy import text, Table, MetaData
 from datetime import datetime
 from collections import OrderedDict
@@ -20,7 +20,7 @@ def listing():
         if request.args.get(arg):
             pagination_args[arg] = request.args[arg]
     
-    changed_records, query, count = paginateView(**pagination_args)
+    changed_records, query, count = groupedChanges(**pagination_args)
     
     changed_records = [OrderedDict(zip(r.keys(), r)) \
                        for r in changed_records]
