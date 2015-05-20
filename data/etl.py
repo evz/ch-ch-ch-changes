@@ -30,7 +30,7 @@ DATA_COLS = '''
     updated_on TIMESTAMP,
     latitude FLOAT8,
     longitude FLOAT8,
-    location VARCHAR(30),
+    location VARCHAR(50),
 '''
 
 COLS = [
@@ -110,9 +110,8 @@ def insertSourceData(fp):
         with conn.cursor() as curs:
             try:
                 curs.copy_expert(copy_st, f)
-            except psycopg2.extensions.QueryCanceledError:
-                 conn.rollback()
-                 curs.copy_expert(copy_st, fp)
+            except psycopg2.extensions.QueryCanceledError as e:
+                 raise e
 
 def makeNewDupTables():
     ''' 
@@ -349,7 +348,8 @@ if __name__ == "__main__":
     tree = lxml.etree.fromstring(bucket_listing.content)
     for chunk in tree.findall('{%s}Contents' % tag_prefix):
         for key in chunk.findall('{%s}Key' % tag_prefix):
-            downloads.append((bucket_url, key.text))
+            if key.text.endswith('gz'):
+                downloads.append((bucket_url, key.text))
     
     downloads = sorted(downloads, key=itemgetter(1))
 
@@ -366,12 +366,13 @@ if __name__ == "__main__":
             print('found a record for %s' % filename)
         else:
             print('downloading %s' % filename)
-            with open(filename, 'wb') as f:
-                r = requests.get('%s/%s' % (bucket_url, filename), stream=True)
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk:
-                        f.write(chunk)
-                        f.flush()
+            if not os.path.exists(filename):
+                with open(filename, 'wb') as f:
+                    r = requests.get('%s/%s' % (bucket_url, filename), stream=True)
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                            f.flush()
         
             contents = open(filename, 'rb')
             
@@ -383,26 +384,29 @@ if __name__ == "__main__":
                 print('inserting source data')
                 insertSourceData(contents)
                 contents.close()
-            except psycopg2.DataError:
+                proceed = True
+            except Exception as e:
                 contents.close()
-                os.remove(filename)
+                # os.remove(filename)
+                print(e)
                 updateMetaTable(filename, 'failed - bad data')
-                continue
+                proceed = False
             
-            print('finding duplicates')
-            makeNewDupTables()
-            findDupRows()
-     
-            print('inserting new data')
-            findNewRows()
-            insertNewRows(filename)
-     
-            print('finding changes')
-            findChangedRows()
-     
-            print('flagging changes')
-            flagChanges()
-            updateView()
+            if proceed:
+                print('finding duplicates')
+                makeNewDupTables()
+                findDupRows()
+         
+                print('inserting new data')
+                findNewRows()
+                insertNewRows(filename)
+         
+                print('finding changes')
+                findChangedRows()
+         
+                print('flagging changes')
+                flagChanges()
+                updateView()
 
-            updateMetaTable(filename, 'success')
-            os.remove(filename)
+                updateMetaTable(filename, 'success')
+                # os.remove(filename)

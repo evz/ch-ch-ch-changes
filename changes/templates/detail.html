@@ -5,8 +5,12 @@
     <div class="col-sm-12">
         <table class="table table-bordered table-condensed">
             <tbody>
-                {% for field, values in grouped_by_fields.items() %}
-                    <tr>
+                {% for field, values in grouped_by_field.items() %}
+                    {% if field in diff_fields %}
+                        <tr class="danger">
+                    {% else %}
+                        <tr>
+                    {% endif %}
                         <td><strong>{{field}}</strong></td>
                         {% for value in values %}
                             <td>{{ value }}</td>

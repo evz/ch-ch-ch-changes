@@ -62,7 +62,7 @@ def detail(record_id):
           latitude AS "Latitude",
           longitude AS "Longitude"
         FROM changed_records WHERE id = :record_id
-        ORDER BY updated_on DESC
+        ORDER BY updated_on
     '''
     record_set = engine.execute(text(record_set), record_id=record_id)
     
@@ -74,5 +74,10 @@ def detail(record_id):
                 grouped_by_field[field].append(getattr(record, field))
             except KeyError:
                 grouped_by_field[field] = [getattr(record, field)]
-
-    return render_template('detail.html', grouped_by_fields=grouped_by_field)
+    diff_fields = []
+    for field, values in grouped_by_field.items():
+        if len(set(values)) > 1:
+            diff_fields.append(field)
+    return render_template('detail.html', 
+                           grouped_by_field=grouped_by_field,
+                           diff_fields=diff_fields)
