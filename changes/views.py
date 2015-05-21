@@ -27,14 +27,30 @@ def index():
         GROUP BY id
         ORDER BY COUNT(*) DESC
         LIMIT :limit
-        OFFSET :offset
     '''
+    
+    if request.args.get('page'):
+        page = int(request.args['page'])
+        offset = (page - 1) * 100
+        grouped_records = '{0} OFFSET {1}'\
+                .format(grouped_records, offset)
+    
     grouped_records = engine.execute(text(grouped_records), 
                                      limit=limit,
                                      offset=offset)
+    
+    record_count = ''' 
+        SELECT COUNT(DISTINCT id) AS record_count
+        FROM changed_records
+    '''
 
+    record_count = engine.execute(record_count).first().record_count
+    
+    page_count = int(round(record_count, -2) / 100)
+    
     return render_template('index.html', 
-                           grouped_records=grouped_records)
+                           grouped_records=grouped_records,
+                           page_count=page_count)
 
 @views.route('/detail/<record_id>/')
 def detail(record_id):
@@ -74,10 +90,13 @@ def detail(record_id):
                 grouped_by_field[field].append(getattr(record, field))
             except KeyError:
                 grouped_by_field[field] = [getattr(record, field)]
+    
     diff_fields = []
+    
     for field, values in grouped_by_field.items():
         if len(set(values)) > 1:
             diff_fields.append(field)
+    
     return render_template('detail.html', 
                            grouped_by_field=grouped_by_field,
                            diff_fields=diff_fields)

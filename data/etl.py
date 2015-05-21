@@ -317,14 +317,21 @@ def makeMetaTable():
             curs.execute(create)
 
 def updateMetaTable(filename, status):
+    from datetime import date
+    
+    year, month, day = filename.split('T')[0].split('/')[1].split('-')
+    file_date = date(int(year), int(month), int(day))
+    
     insert = ''' 
-        INSERT INTO etl_tracker (filename, etl_status) 
-        VALUES (%(filename)s, %(status)s)
+        INSERT INTO etl_tracker (filename, etl_status, file_date) 
+        VALUES (%(filename)s, %(status)s, %(file_date)s)
     '''
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
             curs.execute(insert, 
-                         {'filename':filename, 'status': status})
+                         {'filename':filename, 
+                          'status': status,
+                          'file_date': file_date})
 
 if __name__ == "__main__":
     import os
@@ -333,6 +340,7 @@ if __name__ == "__main__":
     import lxml.etree
     import requests
     from operator import itemgetter
+    import time
 
     makeDataTable()
     makeMetaTable()
@@ -355,24 +363,27 @@ if __name__ == "__main__":
 
     for bucket_url, filename in downloads:
         print('working on %s' % filename)
-        
+        file_date = filename.split('T')[0].split('/')[1]
         conn = psycopg2.connect(DB_CONN_STR)
         curs = conn.cursor()
-        curs.execute('SELECT * FROM etl_tracker WHERE filename = %(filename)s', {'filename': filename})
+        curs.execute('SELECT * FROM etl_tracker WHERE file_date = %(file_date)s', 
+                     {'file_date': file_date})
         record = curs.fetchone()
         conn.close()
 
         if record:
-            print('found a record for %s' % filename)
+            print('found a record for date %s' % file_date)
         else:
             print('downloading %s' % filename)
             if not os.path.exists(filename):
+                start = time.time()
                 with open(filename, 'wb') as f:
                     r = requests.get('%s/%s' % (bucket_url, filename), stream=True)
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:
                             f.write(chunk)
                             f.flush()
+                print('download took %s \n' % (time.time() - start))
         
             contents = open(filename, 'rb')
             
@@ -382,31 +393,38 @@ if __name__ == "__main__":
             
             try:
                 print('inserting source data')
+                start = time.time()
                 insertSourceData(contents)
+                print('insert took %s \n' % (time.time() - start))
                 contents.close()
                 proceed = True
             except Exception as e:
                 contents.close()
-                # os.remove(filename)
                 print(e)
                 updateMetaTable(filename, 'failed - bad data')
                 proceed = False
             
             if proceed:
                 print('finding duplicates')
+                start = time.time()
                 makeNewDupTables()
                 findDupRows()
+                print('dedupe took %s \n' % (time.time() - start))
          
                 print('inserting new data')
+                start = time.time()
                 findNewRows()
                 insertNewRows(filename)
-         
+                print('new rows took %s \n' % (time.time() - start))
+
                 print('finding changes')
+                start = time.time()
                 findChangedRows()
+                print('changes took %s \n' % (time.time() - start))
          
                 print('flagging changes')
                 flagChanges()
                 updateView()
 
                 updateMetaTable(filename, 'success')
-                # os.remove(filename)
+                os.remove(filename)

@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
+{% from 'macros.html' import pager %}
 {% block title %}Ch-ch-ch-changes{% endblock %}
 {% block extra_styles %}{% endblock %}
 {% block content %}
+<div class="row">
     <div class="col-sm-12">
         <table class="table table-bordered table-condensed">
             <thead>
@@ -30,5 +32,11 @@
             </tbody>
         </table>
     </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+      {{ pager(request.args.get('page', 1)|int, page_count|int, request.path) }}
+    </div>
+</div>
 {% endblock %}
 {% block extra_javascript %}{% endblock %}
