@@ -69,6 +69,7 @@ def makeDataTable():
           start_date TIMESTAMP,
           end_date TIMESTAMP DEFAULT NULL,
           current_flag BOOLEAN DEFAULT TRUE,
+          deleted_flag BOOLEAN DEFAULT FALSE,
           dup_ver INTEGER,
           source_filename VARCHAR,
           {0}
@@ -282,6 +283,23 @@ def flagChanges():
         with conn.cursor() as curs:
             curs.execute(insert)
 
+def flagDeletions():
+    update = ''' 
+        UPDATE dat_chicago_crime SET
+          deleted_flag = TRUE
+        FROM (
+          SELECT d.id
+          FROM dat_chicago_crime AS d
+          LEFT JOIN src_chicago_crime AS s
+            USING(id)
+          WHERE s.id IS NULL
+        ) AS subq
+        WHERE subq.id = dat_chicago_crime.id
+    '''
+    with psycopg2.connect(DB_CONN_STR) as conn:
+        with conn.cursor() as curs:
+            curs.execute(update)
+
 def updateView():
     create = ''' 
         CREATE MATERIALIZED VIEW changed_records AS (
@@ -309,7 +327,8 @@ def makeMetaTable():
         CREATE TABLE IF NOT EXISTS etl_tracker(
             filename VARCHAR,
             date_added TIMESTAMP DEFAULT NOW(),
-            etl_status VARCHAR
+            etl_status VARCHAR,
+            file_date DATE
         )
     '''
     with psycopg2.connect(DB_CONN_STR) as conn:
@@ -424,6 +443,11 @@ if __name__ == "__main__":
          
                 print('flagging changes')
                 flagChanges()
+                
+                print('flagging deletions')
+                flagDeletions()
+
+                print('updating view')
                 updateView()
 
                 updateMetaTable(filename, 'success')
