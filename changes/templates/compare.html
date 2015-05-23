@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Ch-ch-ch-changes{% endblock %}
+{% block extra_styles %}{% endblock %}
+{% block content %}
+    <div class="col-sm-12">
+        <table class="table table-bordered table-condensed">
+            <tbody>
+                {% for field, values in grouped_by_field.items() %}
+                    {% if field in diff_fields %}
+                        <tr class="danger">
+                    {% else %}
+                        <tr>
+                    {% endif %}
+                        <td><strong>{{field}}</strong></td>
+                        {% for value in values %}
+                            <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+{% block extra_javascript %}{% endblock %}

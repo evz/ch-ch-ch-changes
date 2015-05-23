@@ -100,3 +100,39 @@ def detail(record_id):
     return render_template('detail.html', 
                            grouped_by_field=grouped_by_field,
                            diff_fields=diff_fields)
+
+@views.route('/compare/')
+def compare():
+    records = ''' 
+        SELECT
+          c.id AS "Record ID",
+          c.case_number AS "Case Number",
+          c.orig_date AS "Report Date",
+          c.block AS "Block",
+          c.iucr AS "IUCR Code",
+          c.primary_type "Primary Classification",
+          c.description AS "Secondary Classification",
+          c.location_description AS "Location Description",
+          c.arrest AS "Arrest",
+          c.domestic AS "Domestic",
+          c.beat AS "Beat",
+          c.district AS "District",
+          c.ward AS "Ward",
+          c.community_area AS "Community Area",
+          c.fbi_code AS "FBI Code",
+          c.x_coordinate AS "X Coordinate",
+          c.y_coordinate AS "Y Coordinate",
+          c.year AS "Year",
+          c.updated_on AS "Last Update",
+          c.latitude AS "Latitude",
+          c.longitude AS "Longitude"
+        FROM changed_records AS c
+        JOIN (
+          SELECT id
+          FROM changed_records
+          WHERE updated_on BETWEEN :start_date AND :end_date
+        ) AS s
+          ON c.id = s.id
+        ORDER BY updated_on DESC
+    '''
+    return render_template('compare.html')

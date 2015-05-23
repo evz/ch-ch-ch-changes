@@ -70,6 +70,7 @@ def makeDataTable():
           end_date TIMESTAMP DEFAULT NULL,
           current_flag BOOLEAN DEFAULT TRUE,
           deleted_flag BOOLEAN DEFAULT FALSE,
+          deleted_on TIMESTAMP,
           dup_ver INTEGER,
           source_filename VARCHAR,
           {0}
@@ -77,9 +78,17 @@ def makeDataTable():
           UNIQUE(id, start_date)
         )
         '''.format(DATA_COLS)
+    flag_index = ''' 
+        CREATE INDEX ON dat_chicago_crime(deleted_flag)
+    '''
+    date_index = ''' 
+        CREATE INDEX ON dat_chicago_crime(deleted_on)
+    '''
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
             curs.execute(create)
+            curs.execute(flag_index)
+            curs.execute(date_index)
 
 def makeSourceTable():
     ''' 
@@ -286,9 +295,12 @@ def flagChanges():
 def flagDeletions():
     update = ''' 
         UPDATE dat_chicago_crime SET
-          deleted_flag = TRUE
+          deleted_flag = TRUE,
+          deleted_on = subq.updated_on
         FROM (
-          SELECT d.id
+          SELECT 
+            d.id, 
+            d.updated_on AS updated_on
           FROM dat_chicago_crime AS d
           LEFT JOIN src_chicago_crime AS s
             USING(id)
@@ -420,7 +432,7 @@ if __name__ == "__main__":
             except Exception as e:
                 contents.close()
                 print(e)
-                updateMetaTable(filename, 'failed - bad data')
+                # updateMetaTable(filename, 'failed - bad data')
                 proceed = False
             
             if proceed:
@@ -451,4 +463,4 @@ if __name__ == "__main__":
                 updateView()
 
                 updateMetaTable(filename, 'success')
-                os.remove(filename)
+                #os.remove(filename)
