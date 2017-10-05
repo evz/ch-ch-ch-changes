@@ -8,25 +8,28 @@
         <table class="table table-bordered table-condensed">
             <thead>
                 <tr>
-                    {% set fields = grouped_records._cursor_description() %}
                     <th>Change Count</th>
                     {% for field in fields %}
-                        {% if field.name != 'Change Count' %}
-                            <th>{{ field.name }}</th>
+                        {% if field != 'Change Count' %}
+                            <th>{{ field }}</th>
                         {% endif %}
                     {% endfor %}
+                    <th>Changed fields</th>
                 </tr>
             </thead>
             <tbody>
                 {% for record in grouped_records %}
                     <tr>
-                        {% set record_id = record|attr('Record ID') %}
-                        <td><a href="{{ url_for('views.detail', record_id=record_id ) }}">{{ record|attr('Change Count') }}</a></td>
+                        {% set record_id = record['Record ID'] %}
+                        <td><a href="{{ url_for('views.detail', record_id=record_id ) }}">{{ record['Change Count'] }}</a></td>
                         {% for field in fields %}
-                            {% if field.name != 'Change Count' %}
-                                <td>{{ record|attr(field.name) }}</td>
+                            {% if field != 'Change Count' %}
+                                <td>{{ record[field] }}</td>
                             {% endif %}
                         {% endfor %}
+                        <td>
+                            {{ record['diff_fields']|join(', ') }}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

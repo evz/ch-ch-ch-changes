@@ -8,7 +8,7 @@ DB_PORT = '5432'
 DB_CONN_STR = 'host={0} dbname={1} user={2} port={3}'\
     .format(DB_HOST, DB_NAME, DB_USER, DB_PORT)
 
-DATA_COLS = ''' 
+DATA_COLS = '''
     id BIGINT,
     case_number VARCHAR(10),
     orig_date TIMESTAMP,
@@ -59,7 +59,7 @@ COLS = [
 ]
 
 def makeDataTable():
-    ''' 
+    '''
     Step One: Make the data table where the data will eventually live
     '''
 
@@ -78,10 +78,10 @@ def makeDataTable():
           UNIQUE(id, start_date)
         )
         '''.format(DATA_COLS)
-    flag_index = ''' 
+    flag_index = '''
         CREATE INDEX ON dat_chicago_crime(deleted_flag)
     '''
-    date_index = ''' 
+    date_index = '''
         CREATE INDEX ON dat_chicago_crime(deleted_on)
     '''
     with psycopg2.connect(DB_CONN_STR) as conn:
@@ -91,11 +91,11 @@ def makeDataTable():
             curs.execute(date_index)
 
 def makeSourceTable():
-    ''' 
+    '''
     Step Two: Make the table where we will store the incoming data
     '''
     drop = 'DROP TABLE IF EXISTS src_chicago_crime'
-    create = ''' 
+    create = '''
         CREATE TABLE IF NOT EXISTS src_chicago_crime(
           {0}
           line_num SERIAL
@@ -107,11 +107,11 @@ def makeSourceTable():
             curs.execute(create)
 
 def insertSourceData(fp):
-    ''' 
+    '''
     Step Three: Store the incoming data
     '''
-    copy_st = ''' 
-        COPY src_chicago_crime({0}) 
+    copy_st = '''
+        COPY src_chicago_crime({0})
         FROM STDIN
         WITH (FORMAT CSV, HEADER TRUE, DELIMITER',')
     '''.format(','.join(COLS))
@@ -124,20 +124,20 @@ def insertSourceData(fp):
                  raise e
 
 def makeNewDupTables():
-    ''' 
+    '''
     Step Four: Make tables that we'll use to find records with the same id
     and where we will find records that are not already in the dat table
     '''
 
     drop = 'DROP TABLE IF EXISTS {0}_chicago_crime'
-    create = ''' 
+    create = '''
         CREATE TABLE IF NOT EXISTS {0}_chicago_crime(
           id BIGINT,
           line_num INT,
           dup_ver INT,
           PRIMARY KEY(dup_ver, id)
         )'''
-    create_index = ''' 
+    create_index = '''
         CREATE INDEX {0}_id_ix ON {0}_chicago_crime (id)
     '''
     for table in ['new', 'dup']:
@@ -148,14 +148,14 @@ def makeNewDupTables():
                 curs.execute(create_index.format(table))
 
 def findDupRows():
-    ''' 
+    '''
     Step Five: Find records that have the same id
     '''
-    insert = ''' 
+    insert = '''
         INSERT INTO dup_chicago_crime
-        SELECT 
-          id, 
-          line_num, 
+        SELECT
+          id,
+          line_num,
           RANK() OVER(
             PARTITION BY id ORDER BY line_num DESC
           ) AS dup_ver
@@ -166,12 +166,12 @@ def findDupRows():
             curs.execute(insert)
 
 def findNewRows():
-    ''' 
+    '''
     Step Six: Find records that don't already exist in the dat table
     '''
-    insert = ''' 
+    insert = '''
         INSERT INTO new_chicago_crime
-        SELECT 
+        SELECT
           id,
           line_num,
           dup_ver
@@ -187,17 +187,17 @@ def findNewRows():
             curs.execute(insert)
 
 def insertNewRows(filename):
-    ''' 
+    '''
     Step Seven: Insert new rows into the dat table
     '''
-    insert = ''' 
+    insert = '''
         INSERT INTO dat_chicago_crime (
-          start_date, 
+          start_date,
           dup_ver,
           source_filename,
           {0}
         )
-        SELECT 
+        SELECT
           NOW() AS start_date,
           n.dup_ver,
           %(filename)s AS source_filename,
@@ -211,7 +211,7 @@ def insertNewRows(filename):
             curs.execute(insert, {'filename': filename})
 
 def findChangedRows():
-    ''' 
+    '''
     Step Eight: Compare incoming data to data already in dat table to find
     rows that have changed.
     '''
@@ -228,7 +228,7 @@ def findChangedRows():
             curs.execute(drop)
             curs.execute(create)
 
-    insert = ''' 
+    insert = '''
         INSERT INTO chg_chicago_crime
           SELECT d.id
           FROM src_chicago_crime AS s
@@ -254,14 +254,14 @@ def findChangedRows():
                OR ((s.updated_on IS NOT NULL OR d.updated_on IS NOT NULL) AND s.updated_on <> d.updated_on)
             )
     '''
-    
+
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
             curs.execute(insert)
 
 def flagChanges():
     # Update existing records to no longer be current
-    update = ''' 
+    update = '''
         UPDATE dat_chicago_crime AS d SET
           end_date = NOW(),
           current_flag = FALSE
@@ -269,37 +269,37 @@ def flagChanges():
         WHERE d.id = c.id
           AND d.current_flag = TRUE
     '''
-    
-    # Insert new version 
-    insert = ''' 
+
+    # Insert new version
+    insert = '''
         INSERT INTO dat_chicago_crime (
-          start_date, 
+          start_date,
           {0}
         )
-        SELECT 
+        SELECT
           NOW() AS start_date,
           {0}
         FROM src_chicago_crime AS s
         JOIN chg_chicago_crime AS c
           USING(id)
     '''.format(','.join(COLS))
-    
+
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
             curs.execute(update)
-    
+
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
             curs.execute(insert)
 
 def flagDeletions():
-    update = ''' 
+    update = '''
         UPDATE dat_chicago_crime SET
           deleted_flag = TRUE,
           deleted_on = subq.updated_on
         FROM (
-          SELECT 
-            d.id, 
+          SELECT
+            d.id,
             d.updated_on AS updated_on
           FROM dat_chicago_crime AS d
           LEFT JOIN src_chicago_crime AS s
@@ -313,7 +313,7 @@ def flagDeletions():
             curs.execute(update)
 
 def updateView():
-    create = ''' 
+    create = '''
         CREATE MATERIALIZED VIEW changed_records AS (
             SELECT d.* FROM dat_chicago_crime AS d
             JOIN (
@@ -335,7 +335,7 @@ def updateView():
                 conn.commit()
 
 def makeMetaTable():
-    create = ''' 
+    create = '''
         CREATE TABLE IF NOT EXISTS etl_tracker(
             filename VARCHAR,
             date_added TIMESTAMP DEFAULT NOW(),
@@ -349,18 +349,18 @@ def makeMetaTable():
 
 def updateMetaTable(filename, status):
     from datetime import date
-    
+
     year, month, day = filename.split('T')[0].split('/')[1].split('-')
     file_date = date(int(year), int(month), int(day))
-    
-    insert = ''' 
-        INSERT INTO etl_tracker (filename, etl_status, file_date) 
+
+    insert = '''
+        INSERT INTO etl_tracker (filename, etl_status, file_date)
         VALUES (%(filename)s, %(status)s, %(file_date)s)
     '''
     with psycopg2.connect(DB_CONN_STR) as conn:
         with conn.cursor() as curs:
-            curs.execute(insert, 
-                         {'filename':filename, 
+            curs.execute(insert,
+                         {'filename':filename,
                           'status': status,
                           'file_date': file_date})
 
@@ -379,9 +379,9 @@ if __name__ == "__main__":
     bucket_url = 'http://s3.amazonaws.com/urbanccd-plenario'
 
     bucket_listing = requests.get(bucket_url, params={'prefix': 'crimes_2001_to_present'})
-    
+
     tag_prefix = 'http://s3.amazonaws.com/doc/2006-03-01/'
-    
+
     downloads = []
 
     tree = lxml.etree.fromstring(bucket_listing.content)
@@ -389,7 +389,7 @@ if __name__ == "__main__":
         for key in chunk.findall('{%s}Key' % tag_prefix):
             if key.text.endswith('gz'):
                 downloads.append((bucket_url, key.text))
-    
+
     downloads = sorted(downloads, key=itemgetter(1))
 
     for bucket_url, filename in downloads:
@@ -397,7 +397,7 @@ if __name__ == "__main__":
         file_date = filename.split('T')[0].split('/')[1]
         conn = psycopg2.connect(DB_CONN_STR)
         curs = conn.cursor()
-        curs.execute('SELECT * FROM etl_tracker WHERE file_date = %(file_date)s', 
+        curs.execute('SELECT * FROM etl_tracker WHERE file_date = %(file_date)s',
                      {'file_date': file_date})
         record = curs.fetchone()
         conn.close()
@@ -415,13 +415,13 @@ if __name__ == "__main__":
                             f.write(chunk)
                             f.flush()
                 print('download took %s \n' % (time.time() - start))
-        
+
             contents = open(filename, 'rb')
-            
+
             print('making source table')
-            
+
             makeSourceTable()
-            
+
             try:
                 print('inserting source data')
                 start = time.time()
@@ -434,14 +434,14 @@ if __name__ == "__main__":
                 print(e)
                 # updateMetaTable(filename, 'failed - bad data')
                 proceed = False
-            
+
             if proceed:
                 print('finding duplicates')
                 start = time.time()
                 makeNewDupTables()
                 findDupRows()
                 print('dedupe took %s \n' % (time.time() - start))
-         
+
                 print('inserting new data')
                 start = time.time()
                 findNewRows()
@@ -452,10 +452,10 @@ if __name__ == "__main__":
                 start = time.time()
                 findChangedRows()
                 print('changes took %s \n' % (time.time() - start))
-         
+
                 print('flagging changes')
                 flagChanges()
-                
+
                 print('flagging deletions')
                 flagDeletions()
 
