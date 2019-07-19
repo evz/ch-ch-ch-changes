@@ -85,13 +85,11 @@ def index():
 
             if field in display_fields:
                 fields.add(field)
-                output_record[field] = max(grouped_by_field[field])
+                output_record[field] = max(t for t in grouped_by_field[field] if t is not None)
 
         output_record['diff_fields'] = diff_fields
         output_record['Change Count'] = len(group)
         grouped_records.append(output_record)
-
-    print(grouped_records)
 
     record_count = '''
         SELECT COUNT(DISTINCT id) AS record_count
