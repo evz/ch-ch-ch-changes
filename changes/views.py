@@ -50,7 +50,7 @@ def index():
         "Secondary Classification",
         "Location Description",
         "Arrest",
-        "Last Update"
+        "Last Update",
     ]
 
     if request.args.get('page'):
@@ -77,7 +77,7 @@ def index():
                     grouped_by_field[field] = [record[field]]
 
         diff_fields = []
-        output_record = {}
+        output_record = OrderedDict()
 
         for field, values in grouped_by_field.items():
             if len(set(values)) > 1:
@@ -113,7 +113,11 @@ def detail(record_id):
           case_number AS "Case Number",
           orig_date AS "Report Date",
           block AS "Block",
-          iucr AS "IUCR Code",
+          c.iucr AS "IUCR Code",
+          CASE WHEN index_code = 'I'
+          THEN 'Yes'
+          ELSE 'No'
+          END AS "Index crime?",
           primary_type "Primary Classification",
           description AS "Secondary Classification",
           location_description AS "Location Description",
@@ -130,7 +134,10 @@ def detail(record_id):
           updated_on AS "Last Update",
           latitude AS "Latitude",
           longitude AS "Longitude"
-        FROM changed_records WHERE id = :record_id
+        FROM changed_records AS c
+        JOIN iucr AS i
+        ON c.iucr = i.iucr
+        WHERE id = :record_id
         ORDER BY updated_on
     '''
     record_set = engine.execute(text(record_set), record_id=record_id)
@@ -149,7 +156,78 @@ def detail(record_id):
     for field, values in grouped_by_field.items():
         if len(set(values)) > 1:
             diff_fields.append(field)
-
     return render_template('detail.html',
                            grouped_by_field=grouped_by_field,
                            diff_fields=diff_fields)
+
+
+@views.route('/deleted/')
+def deleted():
+    return render_template('index.html',
+                           grouped_records=grouped_records,
+                           page_count=page_count,
+                           fields=fields)
+
+
+@views.route('/downgraded/')
+def downgraded():
+
+    limit = request.args.get('limit', 100)
+    offset = request.args.get('offset', 0)
+
+    subquery = '''
+      SELECT
+        id,
+        c.iucr,
+        c.primary_type || ' - ' || c.description AS description,
+        c.fbi_code,
+        index_code,
+        updated_on
+      FROM changed_records AS c
+      JOIN iucr AS i
+        USING(iucr)
+      JOIN (
+        SELECT
+          id,
+          array_agg(index_code)
+        FROM changed_records
+        JOIN iucr
+          USING(iucr)
+        GROUP BY id
+        HAVING(
+          array_length(array_agg(DISTINCT index_code), 1) > 1
+            AND array_agg(index_code) && ARRAY['I', 'N']::VARCHAR[]
+        )
+      ) AS s
+        USING(id)
+      ORDER BY id
+    '''
+
+    query = '''
+      SELECT
+        id,
+        json_agg(row_to_json(s.*)) AS data
+      FROM ({}) AS s
+      GROUP BY id
+      LIMIT :limit
+    '''.format(subquery)
+
+    if request.args.get('page'):
+        page = int(request.args['page'])
+        offset = (page - 1) * 100
+        query = '{0} OFFSET {1}'\
+                .format(query, offset)
+
+    records = engine.execute(text(query),
+                             limit=limit,
+                             offset=offset)
+
+    page_count = '''
+      SELECT COUNT(DISTINCT id) FROM ({}) AS s
+    '''.format(subquery)
+
+    page_count = engine.execute(text(page_count)).first().count
+
+    return render_template('downgraded.html',
+                           records=records,
+                           page_count=page_count)

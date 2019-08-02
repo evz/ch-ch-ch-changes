@@ -101,30 +101,11 @@ class ETL(object):
             self.processOne(filename)
 
     def processOne(self, filename):
-        file_date = filename.split('T')[0].split('/')[1]
-        curs = self.conn.cursor()
-        curs.execute('SELECT * FROM etl_tracker WHERE file_date = %(file_date)s',
-                     {'file_date': file_date})
-        record = curs.fetchone()
+        process = self.downloadFile(filename)
 
-        if record:
-            print('found a record for date %s' % file_date)
-        else:
-            print('downloading %s' % filename)
-            if not os.path.exists(filename):
-                start = time.time()
-                with open(filename, 'wb') as f:
-                    r = requests.get('%s/%s' % (self.bucket_url, filename), stream=True)
-                    for chunk in r.iter_content(chunk_size=1024):
-                        if chunk:
-                            f.write(chunk)
-                            f.flush()
-                print('download took %s \n' % (time.time() - start))
-
+        if process:
             contents = open(filename, 'rb')
-
             print('making source table')
-
             self.makeSourceTable()
 
             try:
@@ -168,6 +149,31 @@ class ETL(object):
                 self.updateView()
 
                 self.updateMetaTable(filename, 'success')
+
+    def downloadFile(self, filename):
+        file_date = filename.split('T')[0].split('/')[1]
+        curs = self.conn.cursor()
+        curs.execute('SELECT * FROM etl_tracker WHERE file_date = %(file_date)s',
+                     {'file_date': file_date})
+        record = curs.fetchone()
+
+        if record:
+            print('found a record for date %s' % file_date)
+            process = False
+        else:
+            print('downloading %s' % filename)
+            if not os.path.exists(filename):
+                start = time.time()
+                with open(filename, 'wb') as f:
+                    r = requests.get('%s/%s' % (self.bucket_url, filename), stream=True)
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                            f.flush()
+                print('download took %s \n' % (time.time() - start))
+            process = True
+
+        return process
 
     def makeDataTable(self):
         '''
@@ -347,22 +353,14 @@ class ETL(object):
                 USING (id)
               WHERE d.current_flag = TRUE
                 AND (((s.id IS NOT NULL OR d.id IS NOT NULL) AND s.id <> d.id)
-                   OR ((s.case_number IS NOT NULL OR d.case_number IS NOT NULL) AND s.case_number <> d.case_number)
                    OR ((s.orig_date IS NOT NULL OR d.orig_date IS NOT NULL) AND s.orig_date <> d.orig_date)
-                   OR ((s.block IS NOT NULL OR d.block IS NOT NULL) AND s.block <> d.block)
                    OR ((s.iucr IS NOT NULL OR d.iucr IS NOT NULL) AND s.iucr <> d.iucr)
                    OR ((s.primary_type IS NOT NULL OR d.primary_type IS NOT NULL) AND s.primary_type <> d.primary_type)
                    OR ((s.description IS NOT NULL OR d.description IS NOT NULL) AND s.description <> d.description)
                    OR ((s.location_description IS NOT NULL OR d.location_description IS NOT NULL) AND s.location_description <> d.location_description)
                    OR ((s.arrest IS NOT NULL OR d.arrest IS NOT NULL) AND s.arrest <> d.arrest)
                    OR ((s.domestic IS NOT NULL OR d.domestic IS NOT NULL) AND s.domestic <> d.domestic)
-                   OR ((s.beat IS NOT NULL OR d.beat IS NOT NULL) AND s.beat <> d.beat)
-                   OR ((s.district IS NOT NULL OR d.district IS NOT NULL) AND s.district <> d.district)
-                   OR ((s.ward IS NOT NULL OR d.ward IS NOT NULL) AND s.ward <> d.ward)
-                   OR ((s.community_area IS NOT NULL OR d.community_area IS NOT NULL) AND s.community_area <> d.community_area)
                    OR ((s.fbi_code IS NOT NULL OR d.fbi_code IS NOT NULL) AND s.fbi_code <> d.fbi_code)
-                   OR ((s.year IS NOT NULL OR d.year IS NOT NULL) AND s.year <> d.year)
-                   OR ((s.updated_on IS NOT NULL OR d.updated_on IS NOT NULL) AND s.updated_on <> d.updated_on)
                 )
         '''
 

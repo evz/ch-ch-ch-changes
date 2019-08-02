@@ -19,7 +19,12 @@
             </thead>
             <tbody>
                 {% for record in grouped_records %}
-                    <tr>
+
+                    {% if "IUCR Code" in record['diff_fields'] %}
+                        <tr class="danger">
+                    {% else %}
+                        <tr>
+                    {% endif %}
                         {% set record_id = record['Record ID'] %}
                         <td><a href="{{ url_for('views.detail', record_id=record_id ) }}">{{ record['Change Count'] }}</a></td>
                         {% for field in fields %}
