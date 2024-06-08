@@ -24,20 +24,22 @@ time, might uncover some interesting things.
 ### Why Chicago Crime Reports?
 
 Technically, the techniques used under the hood here could be adapted to work
-with any dataset that gets updated with any frequency. The Chicago Crime
-Reports data (or probably _any_ crime reports data) is interesting for a
-few reasons. First, from a technical perspective it can be challenging to work
-with since it's well over 8 million rows and growing every day. And secondly,
-and probably more interestingly, maybe someone should be paying attention to
-how this file changes. A lot of the time, there's a reasonable explanation for
-why a certain crime report has a particular change. For example, the arrest
-field goes from "false" to "true", which seems like progress. Other times,
-perhaps there's something else going on that's maybe hiding a larger trend. One
-thing that I've built into this project is a view which tracks when reports go
-from an index crime (meaning they need to be reported to the FBI) to a
-non-index crime and vice versa. I make no claims as to what this means or that
-there is something fishy going on here. I just wanted to explore what's
-possible and perhaps get others thinking about it as well.
+with any dataset that gets updated with any frequency. The [Chicago Crime
+Reports
+data](https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-Present/ijzp-q8t2/about_data)
+(or probably _any_ crime reports data) is interesting for a few reasons. First,
+from a technical perspective it can be challenging to work with since it's well
+over 8 million rows and growing every day. And secondly, and probably more
+interestingly, maybe someone should be paying attention to how this file
+changes. A lot of the time, there's a reasonable explanation for why a certain
+crime report has a particular change. For example, the arrest field goes from
+"false" to "true", which seems like progress. Other times, perhaps there's
+something else going on that's maybe hiding a larger trend. One thing that I've
+built into this project is a view which tracks when reports go from an index
+crime (meaning they need to be reported to the FBI) to a non-index crime and
+vice versa. I make no claims as to what this means or that there is something
+fishy going on here. I just wanted to explore what's possible and perhaps get
+others thinking about it as well.
 
 ### Getting setup
 
