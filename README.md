@@ -7,7 +7,7 @@ One way to look at the changes that happen day to day in the Chicago Crime Repor
 A long time ago, I worked on a now defunct project called
 [Plenar.io](https://plenar.io). As part of the process of updating the various
 datasets that we were downloading every day, we ended up with a daily snapshot
-of everything that we loaded on a daily basis. I started getting curious about
+of everything that we loaded. I started getting curious about
 how they might change in expected and unexpected ways so I started building
 this as a little side project mostly to amuse myself. At some point, the folks
 who were in charge of the daily ETLs that powered Plenar.io either deleted or
