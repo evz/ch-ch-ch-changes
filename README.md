@@ -1,18 +1,19 @@
 # ch-ch-ch-ch-changes
 
-One way to look at the changes that happen day to day in the Chicago Crime Reports Data.
+One way to look at the changes that happen day to day in the Chicago Crime
+Reports Data.
 
 ### So, what's going on here?
 
 A long time ago, I worked on a now defunct project called
 [Plenar.io](https://plenar.io). As part of the process of updating the various
 datasets that we were downloading every day, we ended up with a daily snapshot
-of everything that we loaded. I started getting curious about
-how they might change in expected and unexpected ways so I started building
-this as a little side project mostly to amuse myself. At some point, the folks
-who were in charge of the daily ETLs that powered Plenar.io either deleted or
-made private the S3 bucket where all the data was stored so I more or less put
-it down at that point.
+of everything that we loaded. I started getting curious about how things might
+change in expected and unexpected ways so I started building this as a little
+side project mostly to amuse myself. At some point, the folks took over the
+daily ETLs that powered Plenar.io either deleted or made private the S3 bucket
+where all the data was stored so I more or less put it down at that point.
+
 In the summer of 2024, I started remembering this project and how fun it was to
 put together so I dusted it off and made some updates so that it's not relying
 on data stored in the S3 bucket that was backing the Plenar.io project and
