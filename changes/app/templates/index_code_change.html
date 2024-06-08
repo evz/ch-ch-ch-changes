@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import pager %}
+{% block title %}Ch-ch-ch-changes | Index Code Changes{% endblock %}
+{% block extra_styles %}{% endblock %}
+{% block content %}
+<div class="row">
+    <div class="col-sm-12">
+        <h2>FBI Index Crime Classification Changes</h2>
+        <br />
+        <table class="table table-bordered table-condensed">
+            <thead>
+                <tr>
+                    <th>Record ID</th>
+                    <th>IUCR code</th>
+                    <th>FBI Code</th>
+                    <th>Description</th>
+                    <th>Updated On</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for record in records %}
+                {% set css_class = loop.cycle('danger', '') %}
+                <tr class="{{ css_class }}">
+                    <td rowspan={{ record.data|length }}>
+                      <a href="{{ url_for('views.detail', record_id=record.id ) }}">
+                         {{ record.id }}
+                      </a>
+                    </td>
+                    <td>{{ record.data[0].iucr }}</td>
+                    <td>
+                        {{ record.data[0].fbi_code }} ({% if record.data[0].index_code == 'I' %}Index{% else %}Non-Index{% endif %})
+                    </td>
+                    <td>{{ record.data[0].description }}</td>
+                    <td>{{ record.data[0].updated_on }}</td>
+                </tr>
+                {% for data in record.data[1:] %}
+                    <tr class="{{ css_class }}">
+                        <td>{{ data.iucr }}</td>
+                        <td>
+                            {{ data.fbi_code }} ({% if data.index_code == 'I' %}Index{% else %}Non-Index{% endif %})
+                        </td>
+                        <td>{{ data.description }}</td>
+                        <td>{{ data.updated_on }}</td>
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-12">
+      {{ pager(request.args.get('page', 1)|int, page_count|int, request.path) }}
+    </div>
+</div>
+{% endblock %}
+{% block extra_javascript %}{% endblock %}

@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
 {% from 'macros.html' import pager %}
-{% block title %}Ch-ch-ch-changes{% endblock %}
+{% block title %}Ch-ch-ch-changes | Deleted Records{% endblock %}
 {% block extra_styles %}{% endblock %}
 {% block content %}
 <div class="row">
     <div class="col-sm-12">
+        <h2>Deleted Records</h2>
+        <br />
         <table class="table table-bordered table-condensed">
             <thead>
                 <tr>
@@ -12,7 +14,8 @@
                     <th>IUCR code</th>
                     <th>FBI Code</th>
                     <th>Description</th>
-                    <th>Updated On</th>
+                    <th>Reported On</th>
+                    <th>Deleted On</th>
                 </tr>
             </thead>
             <tbody>
@@ -29,7 +32,8 @@
                         {{ record.data[0].fbi_code }} ({% if record.data[0].index_code == 'I' %}Index{% else %}Non-Index{% endif %})
                     </td>
                     <td>{{ record.data[0].description }}</td>
-                    <td>{{ record.data[0].updated_on }}</td>
+                    <td>{{ record.data[0].orig_date }}</td>
+                    <td>{{ record.data[0].deleted_on }}</td>
                 </tr>
                 {% for data in record.data[1:] %}
                     <tr class="{{ css_class }}">
@@ -38,7 +42,8 @@
                             {{ data.fbi_code }} ({% if data.index_code == 'I' %}Index{% else %}Non-Index{% endif %})
                         </td>
                         <td>{{ data.description }}</td>
-                        <td>{{ data.updated_on }}</td>
+                        <td>{{ data.orig_date }}</td>
+                        <td>{{ data.deleted_on }}</td>
                     </tr>
                 {% endfor %}
             {% endfor %}

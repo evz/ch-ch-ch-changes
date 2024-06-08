@@ -24,6 +24,7 @@
   </head>
 
   <body style="height: 100%">
+	  {% block nav %}
       <div class="navbar navbar-default navbar-static-top" role="navigation">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
@@ -34,29 +35,24 @@
           </button>
           <a class="navbar-brand" href="/">Ch-ch-ch-changes</a>
         </div>
-        <div class="navbar-collapse collapse pull-right">
+        <div class="navbar-collapse collapse">
           <ul class="nav navbar-nav">
-            {#
-            <li class="{% if request.path == url_for('views.upload') %}active{% endif %}"><a href='{{ url_for('views.upload') }}'>Get started!</a></li>
-            <li class="{% if request.path == url_for('views.data_sources') %}active{% endif %}"><a href='{{ url_for('views.data_sources') }}'>Data sources</a></li>
-            <li class="{% if request.path == url_for('views.geographies') %}active{% endif %}"><a href='{{ url_for('views.geographies') }}'>Geographies</a></li>
-            <li class="{% if request.path == url_for('views.contribute_data') %}active{% endif %}"><a href='{{ url_for('views.contribute_data') }}'>Contribute source</a></li>
-            <li class="{% if request.path == url_for('views.about') %}active{% endif %}"><a href='{{ url_for('views.about') }}'>About</a></li>
-            #}
+            <li class="{% if request.path == url_for('views.change_list') %}active{% endif %}"><a href='{{ url_for('views.change_list') }}'>Change List</a></li>
+            <li class="{% if request.path == url_for('views.deleted') %}active{% endif %}"><a href='{{ url_for('views.deleted') }}'>Deleted Records</a></li>
+            <li class="{% if request.path == url_for('views.index_code_change') %}active{% endif %}"><a href='{{ url_for('views.index_code_change') }}'>Index Code Changes</a></li>
           </ul>
         </div><!--/.nav-collapse -->
       </div>
+	  {% endblock nav %}
+	  {% block container %}
       <div class="container">
         {% block content %}{% endblock %}
 
         <br />
         <div class='clearfix'></div>
 
-        <div class="footer">
-          <p class='pull-right'>
-          </p>
-        </div>
       </div>
+	  {% endblock container %}
 
     <!-- Bootstrap core JavaScript
     ================================================== -->

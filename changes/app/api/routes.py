@@ -1,17 +1,19 @@
 import os
 import json
-from flask import request, current_app, Blueprint, make_response
-from changes.database import engine, db_session
-from changes.helpers import groupedChanges
-from sqlalchemy import text, Table, MetaData
 from datetime import datetime
 from collections import OrderedDict
 from itertools import groupby
 from operator import itemgetter
 
-api = Blueprint('api', __name__, url_prefix='/api')
+from flask import request, current_app, Blueprint, make_response
+from sqlalchemy import text, Table, MetaData
+
+from app.api import api
+from app.extensions import db
+from helpers import groupedChanges
 
 dthandler = lambda obj: obj.isoformat() if isinstance(obj, datetime) else None
+
 
 @api.route('/')
 def listing():
@@ -22,7 +24,7 @@ def listing():
     
     changed_records, query, count = groupedChanges(**pagination_args)
     
-    changed_records = [OrderedDict(zip(r.keys(), r)) \
+    changed_records = [OrderedDict(zip(changed_records.keys(), r)) \
                        for r in changed_records]
     
     changed_records = sorted(changed_records, key=itemgetter('id'))
@@ -45,4 +47,3 @@ def listing():
     
     response.headers['Content-Type'] = 'application/json'
     return response
-

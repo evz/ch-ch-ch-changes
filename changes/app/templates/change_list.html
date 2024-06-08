@@ -1,14 +1,17 @@
 {% extends 'base.html' %}
 {% from 'macros.html' import pager %}
-{% block title %}Ch-ch-ch-changes{% endblock %}
+{% block title %}Ch-ch-ch-changes | All Changed Records{% endblock %}
 {% block extra_styles %}{% endblock %}
 {% block content %}
 <div class="row">
     <div class="col-sm-12">
+        <h2>All Changed Records</h2>
+        <p>The table below displays records that have had changes made to them. Rows that are highlighted had their classification code changed.</p>
+        <br />
         <table class="table table-bordered table-condensed">
             <thead>
                 <tr>
-                    <th>Change Count</th>
+                    <th>Number of times changed</th>
                     {% for field in fields %}
                         {% if field != 'Change Count' %}
                             <th>{{ field }}</th>

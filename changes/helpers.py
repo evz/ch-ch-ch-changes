@@ -1,4 +1,4 @@
-from changes.database import db_session, engine
+from app.extensions import db
 from sqlalchemy import Table, MetaData, func
 from collections import OrderedDict
 import inspect
@@ -8,8 +8,7 @@ def groupedChanges(order_by='id',
                    limit=500,
                    offset=0):
 
-    view = Table('changed_records', MetaData(),
-                                 autoload=True, autoload_with=engine)
+    view = Table('changed_records', db.metadata, autoload_with=db.engine)
     
     order_by_clause = getattr(getattr(view.c, order_by), sort_order)()
     
@@ -27,13 +26,13 @@ def groupedChanges(order_by='id',
             select_columns.append(func.array_agg(column)\
                                    .label(column.name))
 
-    changed_records = db_session.query(*select_columns)\
-                                .group_by(view.c.id)\
-                                .order_by(order_by_clause)\
-                                .limit(limit)\
-                                .offset(offset)
+    changed_records = db.session.execute(db.select(*select_columns)\
+                                           .group_by(view.c.id)\
+                                           .order_by(order_by_clause)\
+                                           .limit(limit)\
+                                           .offset(offset))
     
-    count = db_session.query(view).count()
+    count = db.session.execute(db.select(view)).rowcount
     
     query = {
         'order_by': order_by,

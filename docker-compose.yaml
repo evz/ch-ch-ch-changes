@@ -1,0 +1,28 @@
+services:
+  changes:
+    build: .
+    environment:
+      DB_HOST: db
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    command:
+      - "flask"
+      - "run"
+      - "--host" 
+      - "0.0.0.0"
+  db:
+    image: 'postgres:15'
+    environment:
+      POSTGRES_PASSWORD: changes-password
+      POSTGRES_USER: changes
+      POSTGRES_DB: changes
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - postgresql_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+volumes:
+  postgresql:
+  postgresql_data:

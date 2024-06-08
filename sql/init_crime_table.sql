@@ -147,4 +147,3 @@ SELECT
   longitude,
   location
 FROM SRC_chicago_crime;
-

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% from 'macros.html' import pager %}
+{% block title %}Ch-ch-ch-changes{% endblock %}
+{% block extra_styles %}{% endblock %}
+{% block nav %}{% endblock nav %}
+{% block container %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Ch-ch-ch-changes</h1>
+        <p>An attempt to track the way the Chicago Crime Reports file changes day to day.</p>
+        <p>
+            So far, you've loaded data between <strong>{{ start_date }}</strong> and <strong>{{ end_date }}</strong>
+        </p>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-sm-4">
+            <a href="{{ url_for('views.change_list') }}" class="btn btn-primary btn-lg btn-block">
+                Changes List
+			</a>
+        </div>
+        <div class="col-sm-4">
+            <a href="{{ url_for('views.index_code_change') }}" class="btn btn-primary btn-lg btn-block">
+                Recategorized Records
+			</a>
+        </div>
+        <div class="col-sm-4">
+            <a href="{{ url_for('views.deleted') }}" class="btn btn-primary btn-lg btn-block">
+                Deleted Records
+			</a>
+         
+        </div>
+    </div>
+    <hr />
+    <div class="row">
+        <div class="col-sm-8 col-sm-offset-2">
+            <h2 class="text-center">So, what's going on here?</h2>
+            <p>A long time ago, I worked on a now defunct project called <a href="https://plenar.io/" target="blank">Plenar.io</a>. As part of the process of updating the various datasets that we were downloading every day, we ended up with a daily snapshot of everything that we loaded on a daily basis. I started getting curious about how they might change in expected and unexpected ways so I started building this as a little side project mostly to amuse myself. At some point, the folks who were in charge of the daily ETLs that powered Plenar.io either deleted or made private the S3 bucket where all the data was stored so I more or less put it down at that point.</p>
+            <p>In the summer of 2024, I started remembering this project and how fun it was to put together so I dusted it off and made some updates so that it's not relying on data stored in the S3 bucket that was backing the Plenar.io project and instead just downloads the Chicago Crime Report file directly from the Chicago Data Portal. It's a real bummer to not have access to the years worth of files that we downloaded daily for Plenar.io but it's still interesting and, with time, might uncover some interesting things.</p>
+            <h2 class="text-center">
+                Why Chicago Crime Reports?
+            </h2>
+            <p>
+            Technically, the techniques used under the hood here could be adapted to work with any dataset that gets updated with any frequency. The Chicago Crime Reports data (or probably <em>any</em> crime reports data) is interesting for a few reasons. First, from a technical perspective it can be challenging to work with since it's well over 8 million rows and growing every day. And secondly, and probably more interestingly, maybe someone should be paying attention to how this file changes. A lot of the time, there's a reasonable explanation for why a certain crime report has a particular change. For example, the arrest field goes from "false" to "true", which seems like progress. Other times, perhaps there's something else going on that's maybe hiding a larger trend. One thing that I've built into this project is a view which tracks when reports go from an index crime (meaning they need to be reported to the FBI) to a non-index crime and vice versa. I make no claims as to what this means or that there is something fishy going on here. I just wanted to explore what's possible and perhaps get others thinking about it as well.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_javascript %}{% endblock %}
