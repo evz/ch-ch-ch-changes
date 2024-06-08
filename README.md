@@ -1,6 +1,6 @@
 # ch-ch-ch-ch-changes
 
-One way to look at the changes that happen day to day in the Chicago.
+One way to look at the changes that happen day to day in the Chicago Crime Reports Data.
 
 ### So, what's going on here?
 
