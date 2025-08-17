@@ -1,6 +1,5 @@
-from sqlalchemy import text
-
 from app.extensions import db
+from sqlalchemy import text
 
 
 class TestViews:
@@ -12,10 +11,7 @@ class TestViews:
             response = client.get("/")
             assert response.status_code == 200
             # Should show default message when no ETL data exists
-            assert (
-                b"Database not initialized" in response.data
-                or b"No data" in response.data
-            )
+            assert b"Database not initialized" in response.data or b"No data" in response.data
 
     def test_change_list_no_data(self, client, app):
         """Test change list when no ETL data exists."""

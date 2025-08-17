@@ -5,11 +5,10 @@ from datetime import datetime
 
 import psycopg2
 import requests
+from app.extensions import db
 from flask import current_app
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
-
-from app.extensions import db
 
 # Configure logging
 logging.basicConfig(
@@ -84,9 +83,7 @@ class ETL(object):
         self.make_meta_table()
 
     def run(self):
-        logger.info(
-            f"Starting ETL process for date: {self.file_date.strftime('%Y-%m-%d')}"
-        )
+        logger.info(f"Starting ETL process for date: {self.file_date.strftime('%Y-%m-%d')}")
 
         try:
             filename = self.download_file("chicago-crime", "ijzp-q8t2")
@@ -145,16 +142,12 @@ class ETL(object):
             start = time.time()
             self.find_new_rows()
             self.insert_new_rows(filename)
-            logger.info(
-                f"New records processing completed in {time.time() - start:.2f} seconds"
-            )
+            logger.info(f"New records processing completed in {time.time() - start:.2f} seconds")
 
             logger.info("Detecting changes")
             start = time.time()
             self.find_changed_rows()
-            logger.info(
-                f"Change detection completed in {time.time() - start:.2f} seconds"
-            )
+            logger.info(f"Change detection completed in {time.time() - start:.2f} seconds")
 
             logger.info("Updating change flags")
             self.flag_changes()
@@ -259,9 +252,7 @@ class ETL(object):
 
             # need the psycopg connection here so that we can use the COPY
             # statement
-            with psycopg2.connect(
-                current_app.config["SQLALCHEMY_DATABASE_URI"]
-            ) as conn:
+            with psycopg2.connect(current_app.config["SQLALCHEMY_DATABASE_URI"]) as conn:
                 with conn.cursor() as curs:
                     try:
                         curs.copy_expert(copy_st, fp)
@@ -527,9 +518,7 @@ class ETL(object):
             WHERE subq.id = dat_chicago_crime.id
         """
         with db.engine.begin() as curs:
-            curs.execute(
-                text(update), {"deleted_on": self.file_date.strftime("%Y-%m-%d")}
-            )
+            curs.execute(text(update), {"deleted_on": self.file_date.strftime("%Y-%m-%d")})
 
     def update_view(self):
         create = """

@@ -1,6 +1,5 @@
-from sqlalchemy import Table, func
-
 from app.extensions import db
+from sqlalchemy import Table, func
 
 
 def groupedChanges(order_by="id", sort_order="asc", limit=500, offset=0):

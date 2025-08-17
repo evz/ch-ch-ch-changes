@@ -2,12 +2,11 @@ import itertools
 import math
 from collections import OrderedDict
 
+from app.extensions import db
+from app.views import views
 from flask import current_app, render_template, request
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError, ProgrammingError
-
-from app.extensions import db
-from app.views import views
 
 
 @views.route("/")
@@ -132,18 +131,14 @@ def change_list():
 
             if field in display_fields:
                 fields.add(field)
-                output_record[field] = max(
-                    t for t in grouped_by_field[field] if t is not None
-                )
+                output_record[field] = max(t for t in grouped_by_field[field] if t is not None)
 
         output_record["diff_fields"] = diff_fields
         output_record["Change Count"] = len(group)
         grouped_records.append(output_record)
 
     try:
-        record_count = db.session.execute(
-            text("SELECT COUNT(*) FROM changed_records")
-        ).first()[0]
+        record_count = db.session.execute(text("SELECT COUNT(*) FROM changed_records")).first()[0]
         page_count = math.ceil((record_count / 100))
 
         if record_count == 0:
@@ -320,6 +315,4 @@ def index_code_change():
 
     page_count = math.ceil((records.rowcount / 100))
 
-    return render_template(
-        "index_code_change.html", records=records, page_count=page_count
-    )
+    return render_template("index_code_change.html", records=records, page_count=page_count)

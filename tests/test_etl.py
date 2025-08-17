@@ -14,9 +14,8 @@ class TestETLChangeDetection:
             etl.make_new_dup_tables()
 
             # Insert test data with same ID, different line numbers
-            from sqlalchemy import text
-
             from app.extensions import db
+            from sqlalchemy import text
 
             db.session.execute(
                 text(
@@ -53,9 +52,8 @@ class TestETLChangeDetection:
             etl.make_source_table()
             etl.make_data_table()
 
-            from sqlalchemy import text
-
             from app.extensions import db
+            from sqlalchemy import text
 
             # Insert existing record with arrest=false
             db.session.execute(
@@ -101,9 +99,8 @@ class TestETLChangeDetection:
             etl.make_source_table()
             etl.make_data_table()
 
-            from sqlalchemy import text
-
             from app.extensions import db
+            from sqlalchemy import text
 
             # Insert existing record with FBI code '01A' (index crime)
             db.session.execute(
@@ -143,9 +140,8 @@ class TestETLChangeDetection:
     def test_no_change_detection(self, app):
         """Test that identical records don't trigger changes."""
         with app.app_context():
-            from sqlalchemy import text
-
             from app.extensions import db
+            from sqlalchemy import text
 
             # Create tables
             etl = ETL("")

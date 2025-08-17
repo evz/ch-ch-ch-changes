@@ -1,8 +1,7 @@
 import click
-from flask import Flask
-
 from app.extensions import db
 from app_config import Config
+from flask import Flask
 
 
 def create_app():

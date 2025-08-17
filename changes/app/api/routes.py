@@ -4,9 +4,8 @@ from datetime import datetime
 from itertools import groupby
 from operator import itemgetter
 
-from flask import make_response, request
-
 from app.api import api
+from flask import make_response, request
 from helpers import groupedChanges
 
 
@@ -24,9 +23,7 @@ def listing():
 
     changed_records, query, count = groupedChanges(**pagination_args)
 
-    changed_records = [
-        OrderedDict(zip(changed_records.keys(), r)) for r in changed_records
-    ]
+    changed_records = [OrderedDict(zip(changed_records.keys(), r)) for r in changed_records]
 
     changed_records = sorted(changed_records, key=itemgetter("id"))
     record_groups = []

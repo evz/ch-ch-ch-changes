@@ -26,9 +26,7 @@ def app():
             db.session.execute(text("DROP TABLE IF EXISTS src_chicago_crime CASCADE"))
             db.session.execute(text("DROP TABLE IF EXISTS dup_chicago_crime CASCADE"))
             db.session.execute(text("DROP TABLE IF EXISTS chg_chicago_crime CASCADE"))
-            db.session.execute(
-                text("DROP MATERIALIZED VIEW IF EXISTS changed_records CASCADE")
-            )
+            db.session.execute(text("DROP MATERIALIZED VIEW IF EXISTS changed_records CASCADE"))
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -50,9 +48,8 @@ def runner(app):
 def dat_chicago_crime_table(app):
     """Create and populate dat_chicago_crime table with test data."""
     with app.app_context():
-        from sqlalchemy import text
-
         from app.etl import ETL
+        from sqlalchemy import text
 
         # Create the table using ETL logic
         etl = ETL("")
