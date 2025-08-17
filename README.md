@@ -136,15 +136,32 @@ flask run-etl --storage-dir /path/to/storage --file-date 2024-01-04
 It'll take probably about 5 or so minutes to complete each day since it won't
 need to re-download those files.
 
-### Running in docker
+### Development with Makefile
 
-I've included a rudimentary Dockerfile and docker-compose file which should at
-least do the basics of running a DB and the app. You'll still need to run the
-ETL separately. To get that up and running, just do:
+A Makefile wraps common Docker operations:
 
+```bash
+make help        # Show available commands
+make build       # Build Docker images
+make up          # Start application and database
+make etl         # Run ETL process (downloads ~1.8GB, takes 15-20 minutes)
+make test        # Run test suite
+make lint        # Run code linting
+make format      # Format code with black and isort
+make check       # Check code formatting without changes
+make logs        # Show application logs
+make shell       # Open shell in application container
+make db-shell    # Open PostgreSQL shell
+make down        # Stop services
+make clean       # Stop containers and remove volumes
 ```
-cd /path/to/cloned/repo
-docker compose up
+
+**Quick start:**
+```bash
+make build
+make up
+make etl
+# Open http://localhost:5000
 ```
 
 ### FAQs

@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: changes
+          POSTGRES_PASSWORD: changes-password
+          POSTGRES_DB: changes
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 changes/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Run full linting (will use setup.cfg config)
+        flake8 changes/ tests/
+        
+    - name: Check code formatting with black
+      run: |
+        black --check --diff changes/ tests/
+        
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff changes/ tests/
+        
+    - name: Run tests
+      env:
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_USER: changes
+        DB_PASS: changes-password
+        DB_NAME: changes
+      run: |
+        # Add project root to Python path (like we do in conftest.py)
+        export PYTHONPATH="${PYTHONPATH}:$(pwd)/changes"
+        cd changes
+        python -m pytest ../tests/ -v --tb=short

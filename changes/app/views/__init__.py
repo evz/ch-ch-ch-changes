@@ -1,5 +1,6 @@
 from flask import Blueprint
 
-views = Blueprint('views', __name__)
+views = Blueprint("views", __name__)
 
-from app.views import routes
+# Import routes to register them with the blueprint
+from app.views import routes  # noqa: F401

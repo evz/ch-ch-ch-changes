@@ -7,6 +7,11 @@ services:
       - db
     ports:
       - "5000:5000"
+    volumes:
+      - ./changes:/code
+      - ./tests:/app/tests
+      - ./docker-entrypoint.sh:/code/docker-entrypoint.sh
+      - ./pytest.ini:/app/pytest.ini
     command:
       - "flask"
       - "run"
