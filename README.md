@@ -1,6 +1,7 @@
 # ch-ch-ch-ch-changes
 
 [![CI](https://github.com/evz/ch-ch-ch-changes/actions/workflows/ci.yml/badge.svg)](https://github.com/evz/ch-ch-ch-changes/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A tool for tracking changes in Chicago's crime dataset over time.
 
