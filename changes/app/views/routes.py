@@ -13,7 +13,7 @@ from app.views import views
 @views.route("/")
 def index():
     query = """
-      SELECT 
+      SELECT
         MIN(file_date) AS start_date,
         MAX(file_date) AS end_date
       FROM etl_tracker
@@ -233,7 +233,7 @@ def deleted():
         id,
         json_agg(row_to_json(s.*)) AS data
       FROM (
-        SELECT 
+        SELECT
           id,
           c.iucr,
           c.primary_type || ' - ' || c.description AS description,

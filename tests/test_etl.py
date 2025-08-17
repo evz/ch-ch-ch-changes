@@ -21,7 +21,7 @@ class TestETLChangeDetection:
             db.session.execute(
                 text(
                     """
-                INSERT INTO src_chicago_crime (id, case_number, line_num) VALUES 
+                INSERT INTO src_chicago_crime (id, case_number, line_num) VALUES
                 (123, 'CASE001', 1),
                 (123, 'CASE001', 2),
                 (123, 'CASE001', 3)
@@ -36,7 +36,7 @@ class TestETLChangeDetection:
             result = db.session.execute(
                 text(
                     """
-                SELECT dup_ver FROM dup_chicago_crime 
+                SELECT dup_ver FROM dup_chicago_crime
                 WHERE id = 123 AND line_num = 3
             """
                 )
@@ -61,8 +61,8 @@ class TestETLChangeDetection:
             db.session.execute(
                 text(
                     """
-                INSERT INTO dat_chicago_crime 
-                (id, arrest, current_flag, start_date) VALUES 
+                INSERT INTO dat_chicago_crime
+                (id, arrest, current_flag, start_date) VALUES
                 (456, false, true, NOW())
             """
                 )
@@ -72,7 +72,7 @@ class TestETLChangeDetection:
             db.session.execute(
                 text(
                     """
-                INSERT INTO src_chicago_crime 
+                INSERT INTO src_chicago_crime
                 (id, arrest) VALUES (456, true)
             """
                 )
@@ -109,8 +109,8 @@ class TestETLChangeDetection:
             db.session.execute(
                 text(
                     """
-                INSERT INTO dat_chicago_crime 
-                (id, fbi_code, current_flag, start_date) VALUES 
+                INSERT INTO dat_chicago_crime
+                (id, fbi_code, current_flag, start_date) VALUES
                 (789, '01A', true, NOW())
             """
                 )
@@ -120,7 +120,7 @@ class TestETLChangeDetection:
             db.session.execute(
                 text(
                     """
-                INSERT INTO src_chicago_crime 
+                INSERT INTO src_chicago_crime
                 (id, fbi_code) VALUES (789, '26')
             """
                 )
@@ -156,8 +156,8 @@ class TestETLChangeDetection:
             db.session.execute(
                 text(
                     """
-                INSERT INTO dat_chicago_crime 
-                (id, case_number, orig_date, primary_type, arrest, fbi_code, current_flag, start_date) VALUES 
+                INSERT INTO dat_chicago_crime
+                (id, case_number, orig_date, primary_type, arrest, fbi_code, current_flag, start_date) VALUES
                 (999, 'CASE999', '2024-01-01', 'THEFT', false, '06', true, NOW())
             """
                 )
@@ -166,8 +166,8 @@ class TestETLChangeDetection:
             db.session.execute(
                 text(
                     """
-                INSERT INTO src_chicago_crime 
-                (id, case_number, orig_date, primary_type, arrest, fbi_code) VALUES 
+                INSERT INTO src_chicago_crime
+                (id, case_number, orig_date, primary_type, arrest, fbi_code) VALUES
                 (999, 'CASE999', '2024-01-01', 'THEFT', false, '06')
             """
                 )

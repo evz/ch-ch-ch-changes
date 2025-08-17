@@ -12,6 +12,7 @@ services:
       - ./tests:/app/tests
       - ./docker-entrypoint.sh:/code/docker-entrypoint.sh
       - ./pytest.ini:/app/pytest.ini
+      - ./setup.cfg:/code/setup.cfg
     command:
       - "flask"
       - "run"

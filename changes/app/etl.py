@@ -1,11 +1,7 @@
-import codecs
-import csv
-import gzip
 import logging
 import os
 import time
-from datetime import date, datetime, timedelta
-from operator import itemgetter
+from datetime import datetime
 
 import psycopg2
 import requests
@@ -275,7 +271,7 @@ class ETL(object):
         update_final = """
             INSERT INTO iucr
             SELECT * FROM update_iucr
-            ON CONFLICT (iucr) 
+            ON CONFLICT (iucr)
             DO UPDATE SET
               iucr = EXCLUDED.iucr,
               primary_description = EXCLUDED.primary_description,

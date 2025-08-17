@@ -45,7 +45,7 @@ class TestViews:
             db.session.execute(
                 text(
                     """
-                INSERT INTO etl_tracker (filename, etl_status, file_date) VALUES 
+                INSERT INTO etl_tracker (filename, etl_status, file_date) VALUES
                 ('test-2024-01-01.csv', 'success', '2024-01-01'),
                 ('test-2024-01-02.csv', 'success', '2024-01-02')
             """

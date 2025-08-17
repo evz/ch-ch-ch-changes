@@ -5,8 +5,8 @@ import pytest
 # Add the code directory to Python path for Docker container
 sys.path.insert(0, "/code")
 
-from app import create_app
-from app.extensions import db
+from app import create_app  # noqa: E402
+from app.extensions import db  # noqa: E402
 
 
 @pytest.fixture
@@ -62,16 +62,16 @@ def dat_chicago_crime_table(app):
         db.session.execute(
             text(
                 """
-            INSERT INTO dat_chicago_crime 
+            INSERT INTO dat_chicago_crime
             (id, case_number, orig_date, block, primary_type, description, location_description,
-             arrest, fbi_code, start_date, current_flag, updated_on) VALUES 
-            (1, 'TEST001', '2024-01-01', '100 BLOCK OF MAIN ST', 'THEFT', 'OVER $500', 'STREET', 
+             arrest, fbi_code, start_date, current_flag, updated_on) VALUES
+            (1, 'TEST001', '2024-01-01', '100 BLOCK OF MAIN ST', 'THEFT', 'OVER $500', 'STREET',
              false, '06', '2024-01-01', false, '2024-01-01'),
-            (1, 'TEST001', '2024-01-01', '100 BLOCK OF MAIN ST', 'THEFT', 'OVER $500', 'STREET', 
+            (1, 'TEST001', '2024-01-01', '100 BLOCK OF MAIN ST', 'THEFT', 'OVER $500', 'STREET',
              true, '06', '2024-01-02', true, '2024-01-02'),
-            (3, 'TEST003', '2024-01-01', '200 BLOCK OF ELM ST', 'BURGLARY', 'UNLAWFUL ENTRY', 'RESIDENCE', 
+            (3, 'TEST003', '2024-01-01', '200 BLOCK OF ELM ST', 'BURGLARY', 'UNLAWFUL ENTRY', 'RESIDENCE',
              false, '05', '2024-01-01', false, '2024-01-01'),
-            (3, 'TEST003', '2024-01-01', '200 BLOCK OF ELM ST', 'BURGLARY', 'UNLAWFUL ENTRY', 'RESIDENCE', 
+            (3, 'TEST003', '2024-01-01', '200 BLOCK OF ELM ST', 'BURGLARY', 'UNLAWFUL ENTRY', 'RESIDENCE',
              false, '05', '2024-01-02', true, '2024-01-02')
         """
             )
