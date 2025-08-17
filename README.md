@@ -1,7 +1,41 @@
 # ch-ch-ch-ch-changes
 
-One way to look at the changes that happen day to day in the Chicago Crime
-Reports Data.
+A tool for tracking changes in Chicago's crime dataset over time.
+
+## Tech Stack
+- Python 3, Flask, SQLAlchemy
+- PostgreSQL 
+- Docker
+- Chicago Data Portal API
+
+## What it does
+- Downloads daily Chicago crime data (8+ million records, ~1.8GB)
+- Detects changes between daily snapshots
+- Tracks when crime classifications change (e.g., index to non-index crimes)
+- Provides a web interface to browse changes
+
+### Why Chicago Crime Reports?
+
+The [Chicago Crime Reports
+data](https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-Present/ijzp-q8t2/about_data)
+is interesting for a few reasons. From a technical perspective it's challenging
+to work with - over 8 million rows and growing daily. But more importantly,
+maybe someone should be paying attention to how this file changes. 
+
+A lot of the time, there's a reasonable explanation for changes. The arrest
+field goes from "false" to "true" - that seems like progress. Other times,
+perhaps there's something else going on that's hiding a larger trend. I've
+built in a view that tracks when reports go from an index crime (reported to
+the FBI) to a non-index crime and vice versa. I make no claims about what this
+means or that there's something fishy going on. I just wanted to explore what's
+possible and get others thinking about it too.
+
+**Why this matters**
+
+Crime data gets updated frequently, but the Chicago Data Portal doesn't
+maintain historical snapshots - there's no official record of how reports
+change over time. This project creates an independent archive to track those
+changes and explore what they might reveal.
 
 ### So, what's going on here?
 
@@ -21,26 +55,6 @@ instead just downloads the Chicago Crime Report file directly from the Chicago
 Data Portal. It's a real bummer to not have access to the years worth of files
 that we downloaded daily for Plenar.io but it's still interesting and, with
 time, might uncover some interesting things.
-
-### Why Chicago Crime Reports?
-
-Technically, the techniques used under the hood here could be adapted to work
-with any dataset that gets updated with any frequency. The [Chicago Crime
-Reports
-data](https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-Present/ijzp-q8t2/about_data)
-(or probably _any_ crime reports data) is interesting for a few reasons. First,
-from a technical perspective it can be challenging to work with since it's well
-over 8 million rows and growing every day. And secondly, and probably more
-interestingly, maybe someone should be paying attention to how this file
-changes. A lot of the time, there's a reasonable explanation for why a certain
-crime report has a particular change. For example, the arrest field goes from
-"false" to "true", which seems like progress. Other times, perhaps there's
-something else going on that's maybe hiding a larger trend. One thing that I've
-built into this project is a view which tracks when reports go from an index
-crime (meaning they need to be reported to the FBI) to a non-index crime and
-vice versa. I make no claims as to what this means or that there is something
-fishy going on here. I just wanted to explore what's possible and perhaps get
-others thinking about it as well.
 
 ### Getting setup
 
